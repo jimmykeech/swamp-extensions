@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^1.0.19",
+    "@swamp-club/swamp-testing": "jsr:@swamp-club/swamp-testing@^0.20260625.23"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-import-prefix"]
+    }
+  }
+}

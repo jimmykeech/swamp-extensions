@@ -1,0 +1,21 @@
+manifestVersion: 1
+name: "@jamesakeech/fly"
+version: "2026.07.01.3"
+description: "Monitor Fly.io organisations and applications — discover apps, machine/deploy state, volumes, snapshots, events — and take safe volume snapshots, via the Fly Machines API."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest in fly/.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - fly_app.ts
+  - fly_org.ts
+
+# Universal — the extension makes only HTTP calls, no platform-specific binaries.
+platforms: []
