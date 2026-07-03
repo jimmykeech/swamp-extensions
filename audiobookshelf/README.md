@@ -49,7 +49,9 @@ swamp model method run abs stats        # aggregate listening stats
 - `items` and `progress` reflect the state of the API key's own library
   visibility and listening history, respectively — not other users' data.
 - `sessions` fetches a single page (`itemsPerPage=<limit>`), most recent first,
-  as reported by the server.
+  as reported by the server. Every session record carries a `truncated` field —
+  `true` when the server reports more sessions than `limit` fetched, so a higher
+  `limit` is needed to see the rest.
 
 ## License
 

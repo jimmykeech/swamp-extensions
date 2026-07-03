@@ -88,6 +88,7 @@ const SessionSchema = z.object({
   startedAt: z.iso.datetime().nullable(),
   updatedAt: z.iso.datetime().nullable(),
   fetchedAt: z.iso.datetime(),
+  truncated: z.boolean(),
 });
 
 /** One day's listening total, used inside StatsSchema. */
@@ -380,9 +381,25 @@ export const model = {
         );
         const libraries = librariesRes.libraries ?? [];
         const handles: DataHandle[] = [];
+        const failedLibraries: string[] = [];
         for (const lib of libraries) {
           const libraryId = lib.id ?? "";
-          const items = await listLibraryItems(ctx, libraryId);
+          // One unreachable library must not discard items already recorded
+          // for the others — skip it and keep going.
+          let items: RawLibraryItem[];
+          try {
+            items = await listLibraryItems(ctx, libraryId);
+          } catch (e) {
+            failedLibraries.push(libraryId);
+            ctx.logger?.warning?.(
+              "Skipping library {library}: {error}",
+              {
+                library: libraryId,
+                error: e instanceof Error ? e.message : String(e),
+              },
+            );
+            continue;
+          }
           for (const it of items) {
             const id = it.id ?? "";
             const meta = it.media?.metadata ?? {};
@@ -420,11 +437,21 @@ export const model = {
             handles.push(await ctx.writeResource("item", id, record));
           }
         }
+        if (
+          libraries.length > 0 && failedLibraries.length === libraries.length
+        ) {
+          throw new Error(
+            `Failed to fetch items from all ${libraries.length} librar(y/ies): ${
+              failedLibraries.join(", ")
+            }`,
+          );
+        }
         ctx.logger?.info(
-          "Recorded {count} item(s) across {libCount} librar(y/ies)",
+          "Recorded {count} item(s) across {libCount} librar(y/ies) ({failedCount} failed)",
           {
             count: handles.length,
             libCount: libraries.length,
+            failedCount: failedLibraries.length,
           },
         );
         return { dataHandles: handles };
@@ -488,12 +515,16 @@ export const model = {
           limit: args.limit,
         });
         const fetchedAt = new Date().toISOString();
-        const res = await absGet<{ sessions?: RawListeningSession[] }>(
+        const res = await absGet<
+          { sessions?: RawListeningSession[]; total?: number }
+        >(
           baseUrl,
           apiKey,
           `/api/me/listening-sessions?page=0&itemsPerPage=${args.limit}`,
         );
         const sessions = res.sessions ?? [];
+        const truncated = typeof res.total === "number" &&
+          res.total > sessions.length;
         const handles: DataHandle[] = [];
         for (const s of sessions) {
           const id = s.id ?? "";
@@ -520,12 +551,17 @@ export const model = {
             startedAt: toIso(s.startedAt),
             updatedAt: toIso(s.updatedAt),
             fetchedAt,
+            truncated,
           };
           handles.push(await ctx.writeResource("session", id, record));
         }
-        ctx.logger?.info("Recorded {count} session(s)", {
-          count: sessions.length,
-        });
+        ctx.logger?.info(
+          "Recorded {count} session(s) (truncated: {truncated})",
+          {
+            count: sessions.length,
+            truncated,
+          },
+        );
         return { dataHandles: handles };
       },
     },

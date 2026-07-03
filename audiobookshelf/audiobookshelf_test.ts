@@ -189,6 +189,43 @@ Deno.test("items: falls back to singular author/narrator/series fields", async (
   assertEquals(d.series, ["Solo Series"]);
 });
 
+Deno.test("items: skips a library that fails and keeps items from the others", async () => {
+  const { context, getWrittenResources } = createModelTestContext({
+    globalArgs: GLOBAL,
+  });
+  const okLib = { ...LIBRARY, id: "lib_ok" };
+  const badLib = { ...LIBRARY, id: "lib_bad" };
+  await withFetch((url) => {
+    if (url.includes("/libraries/lib_bad/items")) {
+      return { status: 500, body: "boom" };
+    }
+    if (url.includes("/items")) return { body: { results: [ITEM] } };
+    return { body: { libraries: [okLib, badLib] } };
+  }, async () => {
+    await methods.items.execute({}, context);
+  });
+  const written = getWrittenResources();
+  assertEquals(written.length, 1);
+  assertEquals(written[0].name, "item_1");
+});
+
+Deno.test("items: throws when every library fails and writes nothing", async () => {
+  const { context, getWrittenResources } = createModelTestContext({
+    globalArgs: GLOBAL,
+  });
+  await withFetch((url) => {
+    if (url.includes("/items")) return { status: 500, body: "boom" };
+    return { body: { libraries: [LIBRARY] } };
+  }, async () => {
+    await assertRejects(
+      () => methods.items.execute({}, context),
+      Error,
+      "Failed to fetch items from all",
+    );
+  });
+  assertEquals(getWrittenResources().length, 0);
+});
+
 Deno.test("progress: one record per media progress entry", async () => {
   const { context, getWrittenResources } = createModelTestContext({
     globalArgs: GLOBAL,
@@ -212,7 +249,7 @@ Deno.test("sessions: requests the given limit and maps device info", async () =>
   let requestedUrl = "";
   await withFetch((url) => {
     requestedUrl = url;
-    return { body: { sessions: [SESSION] } };
+    return { body: { sessions: [SESSION], total: 1 } };
   }, async () => {
     await methods.sessions.execute({ limit: 25 }, context);
   });
@@ -226,6 +263,21 @@ Deno.test("sessions: requests the given limit and maps device info", async () =>
     written[0].data.device,
     "Audiobookshelf App / phone / iOS",
   );
+  assertEquals(written[0].data.truncated, false);
+});
+
+Deno.test("sessions: marks truncated when the server reports more than the limit fetched", async () => {
+  const { context, getWrittenResources } = createModelTestContext({
+    globalArgs: GLOBAL,
+  });
+  await withFetch(
+    () => ({ body: { sessions: [SESSION], total: 500 } }),
+    async () => {
+      await methods.sessions.execute({ limit: 1 }, context);
+    },
+  );
+  const written = getWrittenResources();
+  assertEquals(written[0].data.truncated, true);
 });
 
 Deno.test("stats: aggregates totals, sorted days, and top items", async () => {
