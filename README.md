@@ -8,11 +8,15 @@
 - **[`@jamesakeech/fly`](fly/)** — monitor Fly.io organisations and applications
   (app discovery, machine/deploy state, volumes, snapshots, events) and take
   safe volume snapshots, via the Fly Machines API.
+- **[`@jamesakeech/audiobookshelf`](audiobookshelf/)** — monitor a self-hosted
+  Audiobookshelf server (libraries, audiobooks/podcasts, listening progress,
+  listening sessions, aggregate listening statistics), via the Audiobookshelf
+  REST API.
 
 ## Development
 
 ```sh
-deno test --allow-net fly/
+deno test --allow-net fly/ audiobookshelf/
 deno fmt --check
 deno lint
 ```

@@ -1,0 +1,20 @@
+manifestVersion: 1
+name: "@jamesakeech/audiobookshelf"
+version: "2026.07.03.1"
+description: "Monitor a self-hosted Audiobookshelf server — libraries, audiobooks/podcasts, listening progress, listening sessions, and aggregate listening statistics — via the Audiobookshelf REST API."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest in audiobookshelf/.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - audiobookshelf.ts
+
+# Universal — the extension makes only HTTP calls, no platform-specific binaries.
+platforms: []
