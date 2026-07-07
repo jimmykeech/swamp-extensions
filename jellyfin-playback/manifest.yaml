@@ -1,0 +1,28 @@
+manifestVersion: 1
+name: "@jamesakeech/jellyfin-playback"
+version: "2026.07.07.1"
+description: "Watch-activity methods for @keeb/jellyfin — pull per-session events from the Jellyfin Playback Reporting plugin, plus a core-API watch-history fallback, for building watch-time dashboards."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Extends the @keeb/jellyfin type; source, README, and LICENSE live alongside this manifest.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - jellyfin-playback.ts
+
+dependencies:
+  - "@keeb/jellyfin"
+
+# Universal — the extension makes only HTTP calls, no platform-specific binaries.
+platforms: []
+
+labels:
+  - jellyfin
+  - media
+  - playback
