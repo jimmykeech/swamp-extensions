@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@jamesakeech/spotify"
-version: "2026.07.07.1"
+version: "2026.07.08.1"
 description: "Monitor a single user's Spotify listening activity via the Spotify Web API — recently-played tracks (accumulate over time), plus top-artists and top-tracks rankings — with built-in OAuth helpers to obtain the refresh token."
 
 repository: https://github.com/jimmykeech/swamp-extensions

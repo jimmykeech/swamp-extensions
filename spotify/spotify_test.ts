@@ -87,7 +87,7 @@ Deno.test("authorize: exchanges the code and writes the refresh token", async ()
   const written = getWrittenResources();
   assertEquals(written.length, 1);
   assertEquals(written[0].specName, "credential");
-  assertEquals(written[0].data.refreshToken, "new-refresh");
+  assertEquals(written[0].data.token, "new-refresh");
   assertEquals(written[0].data.scope, "user-top-read");
 });
 

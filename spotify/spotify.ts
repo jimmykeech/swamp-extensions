@@ -54,10 +54,20 @@ const AuthUrlSchema = z.object({
   fetchedAt: z.iso.datetime(),
 });
 
-/** The refresh token produced by `authorize` (instance "current", secret). */
+/**
+ * The refresh token produced by `authorize` (instance "current").
+ *
+ * The `token` field is intentionally NOT marked sensitive: swamp auto-vaults
+ * sensitive outputs and replaces the stored value with a vault-reference
+ * expression, which makes the token impossible to read back with `swamp data
+ * get`. Since this is a one-time bootstrap value the user must copy into their
+ * own vault, it is stored in plaintext — delete the resource (`swamp data
+ * delete`) once you have vaulted it.
+ */
 const CredentialSchema = z.object({
-  refreshToken: z.string().meta({ sensitive: true }).describe(
-    "Store this in your vault and wire it into the model's refreshToken arg",
+  token: z.string().describe(
+    "The OAuth refresh token — copy it into your vault, then delete this " +
+      "resource. Shown in plaintext so it can be read back once.",
   ),
   scope: z.string(),
   fetchedAt: z.iso.datetime(),
@@ -270,7 +280,7 @@ const TIME_RANGES = ["short_term", "medium_term", "long_term"] as const;
 /** Model definition for monitoring a user's Spotify listening activity. */
 export const model = {
   type: "@jamesakeech/spotify",
-  version: "2026.07.07.1",
+  version: "2026.07.08.1",
   globalArguments: GlobalArgsSchema,
   resources: {
     "authUrl": {
@@ -280,11 +290,12 @@ export const model = {
       garbageCollection: 5,
     },
     "credential": {
-      description: "The OAuth refresh token produced by `authorize` (secret)",
+      description:
+        "The OAuth refresh token produced by `authorize` (plaintext, one-time — " +
+        "vault it then delete this resource)",
       schema: CredentialSchema,
-      lifetime: "infinite",
+      lifetime: "1d",
       garbageCollection: 5,
-      sensitiveOutput: true,
     },
     "play": {
       description:
@@ -391,7 +402,7 @@ export const model = {
           );
         }
         const record: z.infer<typeof CredentialSchema> = {
-          refreshToken: json.refresh_token,
+          token: json.refresh_token,
           scope: json.scope ?? SCOPES,
           fetchedAt: new Date().toISOString(),
         };

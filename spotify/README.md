@@ -58,8 +58,9 @@ swamp data get spotify current    # copy the `url`, open it in a browser
 swamp model method run spotify authorize --arg code="<CODE>"
 
 # Read the refresh token and store it in the vault.
-swamp data get spotify current    # copy `refreshToken`
+swamp data get spotify current    # copy the plaintext `token` value
 swamp vault put spotify SPOTIFY_REFRESH_TOKEN="<refresh-token>"
+swamp data delete spotify current --force   # remove the plaintext token once vaulted
 ```
 
 Then wire the refresh token into the model:
@@ -73,7 +74,7 @@ swamp model edit spotify   # set refreshToken to ${{ vault.get('spotify', 'SPOTI
 | Method          | Captures                                                                       |
 | --------------- | ------------------------------------------------------------------------------ |
 | `authorize_url` | one-time OAuth URL to open in a browser (needs only clientId + redirectUri)     |
-| `authorize`     | exchanges the redirect `code` for a refresh token (written as a secret record)  |
+| `authorize`     | exchanges the redirect `code` for a refresh token (plaintext, one-time record)  |
 | `recent_plays`  | recently-played tracks — one `play` per track, keyed by play time (accumulate)  |
 | `top_artists`   | top artists for a `timeRange` — one `topArtist` per artist, with rank/genres    |
 | `top_tracks`    | top tracks for a `timeRange` — one `topTrack` per track, with rank/album        |
@@ -123,8 +124,11 @@ accumulated `play` records (by `primaryArtist`, `albumName`, `trackName`).
 ## Notes
 
 - All errors throw with the HTTP status before any data is written. Secrets
-  (client secret, refresh token) are never logged; the `credential` record is
-  marked sensitive.
+  (client secret, refresh token) are never logged. The `credential` record
+  `authorize` writes holds the refresh token in **plaintext** on purpose — swamp
+  auto-vaults sensitive outputs into an unreadable reference, so a one-time
+  bootstrap value that you must copy out has to be plaintext. Delete it
+  (`swamp data delete spotify current --force`) once it is in your vault.
 - Scopes requested: `user-read-recently-played`, `user-top-read`.
 - Every record carries a `truncated` flag — `true` when a pull returned a full
   page (for `recent_plays`, older plays may be unfetched — poll more often; for
