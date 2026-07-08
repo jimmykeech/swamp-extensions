@@ -1,0 +1,34 @@
+id: 338f1007-2e71-4ddf-86b0-3a3d303105f0
+name: letterboxd-pull
+description: >-
+  Pull the current window of the letterboxd (@jamesakeech/letterboxd) film
+  diary: one diaryEntry per logged watch (watched date, rating, like/rewatch
+  flags, film title/year, TMDB id, poster, review). The RSS feed is a rolling
+  window, so run this on a schedule to accumulate diary history over time.
+tags: {}
+inputs:
+  properties:
+    limit:
+      type: integer
+      default: 50
+      minimum: 1
+      maximum: 200
+      description: Max diary watches to record from this pull
+jobs:
+  - name: main
+    description: Pull the Letterboxd diary window
+    steps:
+      - name: sync_diary
+        description: Fetch the RSS feed and record each diary film watch
+        task:
+          type: model_method
+          modelIdOrName: letterboxd
+          methodName: sync_diary
+          inputs:
+            limit: ${{ inputs.limit }}
+        dependsOn: []
+        weight: 0
+        allowFailure: false
+    dependsOn: []
+    weight: 0
+version: 1
