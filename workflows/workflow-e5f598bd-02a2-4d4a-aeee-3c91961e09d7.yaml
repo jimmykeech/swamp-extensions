@@ -1,0 +1,49 @@
+id: e5f598bd-02a2-4d4a-aeee-3c91961e09d7
+name: hardcover-pull
+description: >-
+  Pull the full current snapshot from the hardcover (@jamesakeech/hardcover)
+  model: the user's profile, their whole tracked library (one record per book
+  with shelf status, rating, authors, pages and read dates), and every reading
+  session (start/finish dates and progress). Steps run sequentially against the
+  same model instance to avoid per-model lock contention.
+tags: {}
+jobs:
+  - name: main
+    description: Sequential pull of every hardcover resource
+    steps:
+      - name: whoami
+        description: Verify the API token and record the user's profile
+        task:
+          type: model_method
+          modelIdOrName: hardcover
+          methodName: whoami
+        dependsOn: []
+        weight: 0
+        allowFailure: false
+      - name: sync_books
+        description: Sync the entire tracked library (all shelves)
+        task:
+          type: model_method
+          modelIdOrName: hardcover
+          methodName: sync_books
+        dependsOn:
+          - step: whoami
+            condition:
+              type: succeeded
+        weight: 0
+        allowFailure: false
+      - name: sync_reads
+        description: Sync every reading session (start/finish dates, progress)
+        task:
+          type: model_method
+          modelIdOrName: hardcover
+          methodName: sync_reads
+        dependsOn:
+          - step: sync_books
+            condition:
+              type: succeeded
+        weight: 0
+        allowFailure: false
+    dependsOn: []
+    weight: 0
+version: 1

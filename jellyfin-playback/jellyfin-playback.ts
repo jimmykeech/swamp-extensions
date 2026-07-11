@@ -28,6 +28,24 @@ const WatchedItemSchema = z.object({
   playCount: z.number(),
   runtimeSeconds: z.number().describe("Item runtime (full length)"),
   genres: z.array(z.string()),
+  primaryImageTag: z
+    .string()
+    .nullable()
+    .describe(
+      "Tag for the item's own primary image (movie poster / episode still); " +
+        "build a URL as {jellyfinUrl}/Items/{itemId}/Images/Primary?tag={tag}",
+    ),
+  seriesId: z
+    .string()
+    .nullable()
+    .describe("Parent series id for episodes, else null"),
+  seriesPrimaryImageTag: z
+    .string()
+    .nullable()
+    .describe(
+      "Tag for the parent series' primary image (poster) for episodes; " +
+        "build a URL as {jellyfinUrl}/Items/{seriesId}/Images/Primary?tag={tag}",
+    ),
   fetchedAt: z.string(),
 });
 
@@ -154,7 +172,8 @@ export const extension = {
                 SortBy: "DatePlayed",
                 SortOrder: "Descending",
                 IncludeItemTypes: "Movie,Episode",
-                Fields: "UserData,RunTimeTicks,SeriesName,Genres",
+                Fields:
+                  "UserData,RunTimeTicks,SeriesName,Genres,ImageTags,SeriesPrimaryImageTag",
                 Limit: String(batchSize),
                 StartIndex: String(startIndex),
               });
@@ -198,6 +217,9 @@ export const extension = {
                     playCount: ud.PlayCount ?? 0,
                     runtimeSeconds,
                     genres: it.Genres ?? [],
+                    primaryImageTag: it.ImageTags?.Primary ?? null,
+                    seriesId: it.SeriesId ?? null,
+                    seriesPrimaryImageTag: it.SeriesPrimaryImageTag ?? null,
                     fetchedAt: new Date().toISOString(),
                   },
                 );
@@ -359,7 +381,7 @@ export const extension = {
           }
 
           if (truncated) {
-            context.logger.warning(
+            (context.logger.warning ?? context.logger.info)(
               "Hit the {limit}-event cap — older events were dropped; raise `limit` to see the rest",
               { limit },
             );

@@ -85,6 +85,9 @@ const PlaySchema = z.object({
   primaryArtist: z.string().nullable(),
   albumId: z.string().nullable(),
   albumName: z.string().nullable(),
+  albumImageUrl: z.string().nullable().describe(
+    "Album cover art URL (Spotify CDN, ~300px), or null if none",
+  ),
   albumReleaseDate: z.string().nullable(),
   contextType: z.string().nullable().describe(
     "Playback context: album, playlist, artist, …",
@@ -106,6 +109,9 @@ const TopArtistSchema = z.object({
   genres: z.array(z.string()),
   popularity: z.number(),
   followers: z.number(),
+  imageUrl: z.string().nullable().describe(
+    "Artist image URL (Spotify CDN, ~320px), or null if none",
+  ),
   truncated: z.boolean().describe(
     "True when Spotify reports more top items than this pull returned",
   ),
@@ -125,6 +131,9 @@ const TopTrackSchema = z.object({
   primaryArtist: z.string().nullable(),
   albumId: z.string().nullable(),
   albumName: z.string().nullable(),
+  albumImageUrl: z.string().nullable().describe(
+    "Album cover art URL (Spotify CDN, ~300px), or null if none",
+  ),
   popularity: z.number(),
   durationMs: z.number(),
   truncated: z.boolean().describe(
@@ -237,8 +246,14 @@ async function spotifyGet<T>(
 
 // --- Raw response shapes (subsets of the Spotify Web API) ---
 
+type RawImage = { url?: string; height?: number; width?: number };
 type RawArtistRef = { id?: string; name?: string };
-type RawAlbum = { id?: string; name?: string; release_date?: string };
+type RawAlbum = {
+  id?: string;
+  name?: string;
+  release_date?: string;
+  images?: RawImage[];
+};
 type RawTrack = {
   id?: string;
   name?: string;
@@ -262,8 +277,23 @@ type RawTopArtist = {
   genres?: string[];
   popularity?: number;
   followers?: { total?: number };
+  images?: RawImage[];
 };
 type RawTopResponse<T> = { items?: T[]; total?: number };
+
+/**
+ * Pick a display-sized cover from a Spotify images array. Spotify returns them
+ * largest-first (typically 640 / 300 / 64 px); we prefer the smallest image at
+ * least 200px wide (a crisp thumbnail without wasting bytes), falling back to
+ * the largest available, then null when the array is empty.
+ */
+function pickImageUrl(images: RawImage[] | undefined): string | null {
+  const list = (images ?? []).filter((i) => typeof i.url === "string");
+  if (list.length === 0) return null;
+  const byWidthAsc = [...list].sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
+  const preferred = byWidthAsc.find((i) => (i.width ?? 0) >= 200);
+  return (preferred ?? byWidthAsc[byWidthAsc.length - 1]).url ?? null;
+}
 
 /** Map a raw track's artists to parallel id/name arrays plus a primary name. */
 function artistArrays(
@@ -280,7 +310,7 @@ const TIME_RANGES = ["short_term", "medium_term", "long_term"] as const;
 /** Model definition for monitoring a user's Spotify listening activity. */
 export const model = {
   type: "@jamesakeech/spotify",
-  version: "2026.07.08.1",
+  version: "2026.07.11.1",
   globalArguments: GlobalArgsSchema,
   resources: {
     "authUrl": {
@@ -467,6 +497,7 @@ export const model = {
             primaryArtist: primary,
             albumId: track.album?.id ?? null,
             albumName: track.album?.name ?? null,
+            albumImageUrl: pickImageUrl(track.album?.images),
             albumReleaseDate: track.album?.release_date ?? null,
             contextType: it.context?.type ?? null,
             truncated,
@@ -521,6 +552,7 @@ export const model = {
             genres: a.genres ?? [],
             popularity: a.popularity ?? 0,
             followers: a.followers?.total ?? 0,
+            imageUrl: pickImageUrl(a.images),
             truncated,
             fetchedAt,
           };
@@ -582,6 +614,7 @@ export const model = {
             primaryArtist: primary,
             albumId: t.album?.id ?? null,
             albumName: t.album?.name ?? null,
+            albumImageUrl: pickImageUrl(t.album?.images),
             popularity: t.popularity ?? 0,
             durationMs: t.duration_ms ?? 0,
             truncated,

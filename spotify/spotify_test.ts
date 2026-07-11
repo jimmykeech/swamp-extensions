@@ -55,7 +55,16 @@ const TRACK = {
   duration_ms: 301_000,
   popularity: 77,
   artists: [{ id: "a1", name: "Daft Punk" }],
-  album: { id: "al1", name: "Discovery", release_date: "2001-03-12" },
+  album: {
+    id: "al1",
+    name: "Discovery",
+    release_date: "2001-03-12",
+    images: [
+      { url: "https://i.scdn.co/image/big", width: 640, height: 640 },
+      { url: "https://i.scdn.co/image/mid", width: 300, height: 300 },
+      { url: "https://i.scdn.co/image/tiny", width: 64, height: 64 },
+    ],
+  },
 };
 
 Deno.test("authorize_url: writes a well-formed authorization URL", async () => {
@@ -131,6 +140,8 @@ Deno.test("recent_plays: writes one play per item, keyed by play time", async ()
   assertEquals(written[0].data.primaryArtist, "Daft Punk");
   assertEquals(written[0].data.artistIds, ["a1"]);
   assertEquals(written[0].data.albumName, "Discovery");
+  // Prefers the smallest image ≥200px wide (the 300px variant) as a thumbnail.
+  assertEquals(written[0].data.albumImageUrl, "https://i.scdn.co/image/mid");
   assertEquals(written[0].data.contextType, "playlist");
   assertEquals(written[0].data.truncated, false);
 });
@@ -179,6 +190,10 @@ Deno.test("top_artists: writes one record per artist with rank and followers", a
             genres: ["french house"],
             popularity: 82,
             followers: { total: 9_000_000 },
+            images: [
+              { url: "https://i.scdn.co/image/a1big", width: 640, height: 640 },
+              { url: "https://i.scdn.co/image/a1mid", width: 320, height: 320 },
+            ],
           },
           { id: "a2", name: "Justice", genres: [], popularity: 70, followers: { total: 2_000_000 } },
         ],
@@ -197,8 +212,11 @@ Deno.test("top_artists: writes one record per artist with rank and followers", a
   assertEquals(written[0].data.rank, 1);
   assertEquals(written[0].data.followers, 9_000_000);
   assertEquals(written[0].data.genres, ["french house"]);
+  assertEquals(written[0].data.imageUrl, "https://i.scdn.co/image/a1mid");
   assertEquals(written[0].data.truncated, false);
   assertEquals(written[1].data.rank, 2);
+  // No images array on the second artist → null.
+  assertEquals(written[1].data.imageUrl, null);
 });
 
 Deno.test("top_tracks: writes one record per track with rank and album", async () => {
@@ -221,6 +239,7 @@ Deno.test("top_tracks: writes one record per track with rank and album", async (
   assertEquals(written[0].data.rank, 1);
   assertEquals(written[0].data.primaryArtist, "Daft Punk");
   assertEquals(written[0].data.albumName, "Discovery");
+  assertEquals(written[0].data.albumImageUrl, "https://i.scdn.co/image/mid");
   assertEquals(written[0].data.durationMs, 301_000);
   assertEquals(written[0].data.truncated, false);
 });
