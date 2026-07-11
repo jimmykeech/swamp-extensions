@@ -50,6 +50,11 @@ const ItemSchema = z.object({
   durationSeconds: z.number(),
   sizeBytes: z.number(),
   numAudioFiles: z.number(),
+  coverPath: z.string().nullable().describe(
+    "Server-side path to the item's cover image when it has one (null if " +
+      "none). The cover itself is served, auth-gated, at " +
+      "GET /api/items/{id}/cover — use this as a has-cover signal.",
+  ),
   isMissing: z.boolean(),
   isInvalid: z.boolean(),
   addedAt: z.iso.datetime().nullable(),
@@ -209,6 +214,7 @@ type RawLibraryItem = {
   addedAt?: number;
   updatedAt?: number;
   media?: {
+    coverPath?: string | null;
     metadata?: {
       title?: string;
       subtitle?: string;
@@ -288,7 +294,7 @@ async function listLibraryItems(
 /** Model definition for monitoring an Audiobookshelf server. */
 export const model = {
   type: "@jamesakeech/audiobookshelf",
-  version: "2026.07.03.1",
+  version: "2026.07.11.1",
   globalArguments: GlobalArgsSchema,
   resources: {
     "library": {
@@ -428,6 +434,7 @@ export const model = {
               durationSeconds: it.media?.duration ?? 0,
               sizeBytes: it.media?.size ?? 0,
               numAudioFiles: it.media?.numAudioFiles ?? 0,
+              coverPath: it.media?.coverPath ?? null,
               isMissing: it.isMissing ?? false,
               isInvalid: it.isInvalid ?? false,
               addedAt: toIso(it.addedAt),
