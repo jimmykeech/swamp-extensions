@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@jamesakeech/jellyfin-playback"
-version: "2026.07.07.1"
+version: "2026.07.11.1"
 description: "Watch-activity methods for @keeb/jellyfin — pull per-session events from the Jellyfin Playback Reporting plugin, plus a core-API watch-history fallback, for building watch-time dashboards."
 
 repository: https://github.com/jimmykeech/swamp-extensions

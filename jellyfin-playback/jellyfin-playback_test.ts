@@ -58,6 +58,9 @@ const PLAYED_ITEM = {
   Type: "Episode",
   Name: "Some Episode",
   SeriesName: "Some Show",
+  SeriesId: "series1",
+  SeriesPrimaryImageTag: "seriestag",
+  ImageTags: { Primary: "episodetag" },
   RunTimeTicks: 6_000_000_000, // 600 seconds
   Genres: ["Drama"],
   UserData: {
@@ -116,6 +119,9 @@ Deno.test("watch_history: writes one watchedItem per played item with mapped fie
   assertEquals(written[0].data.runtimeSeconds, 600);
   assertEquals(written[0].data.playCount, 3);
   assertEquals(written[0].data.genres, ["Drama"]);
+  assertEquals(written[0].data.primaryImageTag, "episodetag");
+  assertEquals(written[0].data.seriesId, "series1");
+  assertEquals(written[0].data.seriesPrimaryImageTag, "seriestag");
 });
 
 Deno.test("watch_history: skips items whose last play is older than the cutoff", async () => {
