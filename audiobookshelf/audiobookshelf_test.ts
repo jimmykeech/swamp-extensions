@@ -71,6 +71,7 @@ const ITEM = {
       genres: ["Science Fiction"],
       publishedYear: "2021",
     },
+    coverPath: "/metadata/items/item_1/cover.jpg",
     duration: 58320,
     size: 512000000,
     numAudioFiles: 32,
@@ -159,6 +160,7 @@ Deno.test("items: fans out across libraries and normalizes metadata", async () =
   assertEquals(written[0].data.narrators, ["Ray Porter"]);
   assertEquals(written[0].data.series, ["Standalone #1"]);
   assertEquals(written[0].data.durationSeconds, 58320);
+  assertEquals(written[0].data.coverPath, "/metadata/items/item_1/cover.jpg");
 });
 
 Deno.test("items: falls back to singular author/narrator/series fields", async () => {
