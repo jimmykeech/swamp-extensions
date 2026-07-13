@@ -84,6 +84,9 @@ const BookSchema = z.object({
   pages: z.number().nullable(),
   releaseYear: z.number().nullable(),
   slug: z.string().nullable().describe("hardcover.app/books/<slug>"),
+  coverUrl: z.string().nullable().describe(
+    "URL of the book's default cover image (null if the book has no image).",
+  ),
   readCount: z.number(),
   owned: z.boolean(),
   dateAdded: z.string().nullable().describe(
@@ -203,6 +206,7 @@ type RawBook = {
   pages?: number | null;
   release_year?: number | null;
   slug?: string | null;
+  image?: { url?: string | null } | null;
   contributions?: RawContribution[];
 };
 type RawUserBook = {
@@ -274,7 +278,7 @@ async function fetchMe(ctx: ExecContext): Promise<RawMe> {
 /** Model definition for monitoring a user's Hardcover reading activity. */
 export const model = {
   type: "@jamesakeech/hardcover",
-  version: "2026.07.08.1",
+  version: "2026.07.13.1",
   globalArguments: GlobalArgsSchema,
   resources: {
     "profile": {
@@ -361,6 +365,7 @@ export const model = {
               first_read_date last_read_date updated_at
               book {
                 id title subtitle pages release_year slug
+                image { url }
                 contributions(order_by: { contributable_type: asc }) {
                   author { name }
                 }
@@ -402,6 +407,7 @@ export const model = {
               pages: ub.book?.pages ?? null,
               releaseYear: ub.book?.release_year ?? null,
               slug: ub.book?.slug ?? null,
+              coverUrl: ub.book?.image?.url ?? null,
               readCount: ub.read_count ?? 0,
               owned: ub.owned ?? false,
               dateAdded: ub.date_added ?? null,

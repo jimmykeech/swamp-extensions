@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@jamesakeech/hardcover"
-version: "2026.07.08.1"
+version: "2026.07.13.1"
 description: "Monitor a single user's Hardcover reading activity via the Hardcover GraphQL API — profile, the whole tracked library (shelf status, rating, review, pages, read dates), and individual reading sessions (start/finish dates, progress). Read-only, token-authenticated."
 
 repository: https://github.com/jimmykeech/swamp-extensions

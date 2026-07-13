@@ -52,6 +52,7 @@ const USER_BOOK = {
     pages: 412,
     release_year: 1965,
     slug: "dune",
+    image: { url: "https://assets.hardcover.app/dune.jpg" },
     contributions: [
       { author: { name: "Frank Herbert" } },
       { author: { name: "Frank Herbert" } },
@@ -142,6 +143,7 @@ Deno.test("sync_books: maps a user_book, dedupes authors, labels status", async 
   assertEquals(written[0].data.rating, 4.5);
   assertEquals(written[0].data.title, "Dune");
   assertEquals(written[0].data.pages, 412);
+  assertEquals(written[0].data.coverUrl, "https://assets.hardcover.app/dune.jpg");
   // Duplicate contributor collapses to a single author name.
   assertEquals(written[0].data.authors, ["Frank Herbert"]);
 });
