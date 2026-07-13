@@ -70,6 +70,8 @@ const ITEM = {
       series: [{ name: "Standalone", sequence: "1" }],
       genres: ["Science Fiction"],
       publishedYear: "2021",
+      isbn: "9780593135204",
+      asin: "B08G9PRS1K",
     },
     coverPath: "/metadata/items/item_1/cover.jpg",
     duration: 58320,
@@ -161,6 +163,8 @@ Deno.test("items: fans out across libraries and normalizes metadata", async () =
   assertEquals(written[0].data.series, ["Standalone #1"]);
   assertEquals(written[0].data.durationSeconds, 58320);
   assertEquals(written[0].data.coverPath, "/metadata/items/item_1/cover.jpg");
+  assertEquals(written[0].data.isbn, "9780593135204");
+  assertEquals(written[0].data.asin, "B08G9PRS1K");
 });
 
 Deno.test("items: falls back to singular author/narrator/series fields", async () => {

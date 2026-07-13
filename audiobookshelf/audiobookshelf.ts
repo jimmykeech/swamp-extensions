@@ -47,6 +47,13 @@ const ItemSchema = z.object({
   series: z.array(z.string()),
   genres: z.array(z.string()),
   publishedYear: z.string().nullable(),
+  isbn: z.string().nullable().describe(
+    "ISBN-13/10 from the book's metadata (null if unset). The reliable key " +
+      "for resolving a book to an external catalogue (e.g. Hardcover).",
+  ),
+  asin: z.string().nullable().describe(
+    "Amazon/Audible ASIN from the book's metadata (null if unset).",
+  ),
   durationSeconds: z.number(),
   sizeBytes: z.number(),
   numAudioFiles: z.number(),
@@ -226,6 +233,8 @@ type RawLibraryItem = {
       series?: Array<{ name?: string; sequence?: string }>;
       genres?: string[];
       publishedYear?: string;
+      isbn?: string | null;
+      asin?: string | null;
     };
     duration?: number;
     size?: number;
@@ -431,6 +440,8 @@ export const model = {
               series,
               genres: meta.genres ?? [],
               publishedYear: meta.publishedYear ?? null,
+              isbn: meta.isbn ?? null,
+              asin: meta.asin ?? null,
               durationSeconds: it.media?.duration ?? 0,
               sizeBytes: it.media?.size ?? 0,
               numAudioFiles: it.media?.numAudioFiles ?? 0,
