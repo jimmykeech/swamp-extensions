@@ -303,7 +303,7 @@ async function listLibraryItems(
 /** Model definition for monitoring an Audiobookshelf server. */
 export const model = {
   type: "@jamesakeech/audiobookshelf",
-  version: "2026.07.11.1",
+  version: "2026.07.13.1",
   globalArguments: GlobalArgsSchema,
   resources: {
     "library": {
