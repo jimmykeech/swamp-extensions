@@ -278,7 +278,7 @@ async function fetchMe(ctx: ExecContext): Promise<RawMe> {
 /** Model definition for monitoring a user's Hardcover reading activity. */
 export const model = {
   type: "@jamesakeech/hardcover",
-  version: "2026.07.13.1",
+  version: "2026.07.20.2",
   globalArguments: GlobalArgsSchema,
   resources: {
     "profile": {
@@ -293,14 +293,20 @@ export const model = {
         "A tracked book in the user's library (one record per user_book, keyed by id)",
       schema: BookSchema,
       lifetime: "infinite",
-      garbageCollection: 20000,
+      // Every sync re-writes each book (its `fetchedAt` changes), so a new version
+      // lands on every run — old versions are pure churn. The library itself is
+      // kept per-record (one `ub-<id>` per user_book, infinite lifetime), so a
+      // small version cap bounds history without dropping any tracked book.
+      garbageCollection: 3,
     },
     "read": {
       description:
         "A reading session (one record per user_book_read, keyed by id)",
       schema: ReadSchema,
       lifetime: "infinite",
-      garbageCollection: 20000,
+      // Same churn as `book`: re-written every sync via `fetchedAt`. Keep only a
+      // few versions per read; the reads themselves persist per-record.
+      garbageCollection: 3,
     },
   },
   methods: {
