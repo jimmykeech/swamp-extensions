@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@jamesakeech/letterboxd"
-version: "2026.07.08.1"
+version: "2026.07.20.1"
 description: "Monitor a single user's Letterboxd film diary via their public RSS feed — one record per logged watch (watched date, star rating, like/rewatch flags, film title/year, TMDB id, poster, review). No credentials required; the feed is a rolling window, so run on a schedule to accumulate history."
 
 repository: https://github.com/jimmykeech/swamp-extensions

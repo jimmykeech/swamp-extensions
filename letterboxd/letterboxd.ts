@@ -238,7 +238,7 @@ async function fetchFeedItems(ctx: ExecContext): Promise<RawItem[]> {
 /** Model definition for monitoring a user's Letterboxd film diary. */
 export const model = {
   type: "@jamesakeech/letterboxd",
-  version: "2026.07.08.1",
+  version: "2026.07.20.1",
   globalArguments: GlobalArgsSchema,
   resources: {
     "diaryEntry": {
@@ -247,7 +247,11 @@ export const model = {
         "accumulate over time)",
       schema: DiaryEntrySchema,
       lifetime: "infinite",
-      garbageCollection: 20000,
+      // Each run re-writes every diary record (its `fetchedAt` changes), so a new
+      // version lands on every poll — old versions are pure churn. Accumulation is
+      // per-record (one `d-<watchId>` per watch, kept by the infinite lifetime), so
+      // a small version cap keeps history bounded without dropping any diary entry.
+      garbageCollection: 3,
     },
   },
   methods: {
