@@ -69,6 +69,51 @@ const PLAYED_ITEM = {
   },
 };
 
+// A recently played movie carrying IMDb/TMDB provider ids.
+const PLAYED_MOVIE = {
+  Id: "m1",
+  Type: "Movie",
+  Name: "Inception",
+  SeriesName: null,
+  ImageTags: { Primary: "movietag" },
+  RunTimeTicks: 88_800_000_000, // 8880 seconds
+  Genres: ["Sci-Fi"],
+  ProviderIds: { Imdb: "tt1375666", Tmdb: "27205" },
+  UserData: {
+    LastPlayedDate: new Date().toISOString(),
+    PlayCount: 1,
+  },
+};
+
+// A recently played episode with season/episode numbers and its own (episode-
+// level) provider id; the show-level ids live on SERIES_ITEM below.
+const PLAYED_EPISODE = {
+  Id: "e1",
+  Type: "Episode",
+  Name: "The Rains of Castamere",
+  SeriesName: "Game of Thrones",
+  SeriesId: "got",
+  SeriesPrimaryImageTag: "gottag",
+  ImageTags: { Primary: "eptag" },
+  ParentIndexNumber: 3,
+  IndexNumber: 9,
+  RunTimeTicks: 30_000_000_000,
+  Genres: ["Fantasy"],
+  ProviderIds: { Tvdb: "4517466" },
+  UserData: {
+    LastPlayedDate: new Date().toISOString(),
+    PlayCount: 1,
+  },
+};
+
+// The parent series item returned by the series-provider lookup for PLAYED_EPISODE.
+const SERIES_ITEM = {
+  Id: "got",
+  Type: "Series",
+  Name: "Game of Thrones",
+  ProviderIds: { Imdb: "tt0944947", Tmdb: "1399", Tvdb: "121361" },
+};
+
 // Column order the plugin's submit_custom_query returns for our SELECT.
 const PB_COLUMNS = [
   "rowid",
@@ -124,6 +169,58 @@ Deno.test("watch_history: writes one watchedItem per played item with mapped fie
   assertEquals(written[0].data.seriesPrimaryImageTag, "seriestag");
 });
 
+Deno.test("watch_history: maps a movie's IMDb/TMDB provider ids, no series fields", async () => {
+  const { context, getWrittenResources } = createModelTestContext({
+    globalArgs: GLOBAL,
+  });
+  await withFetch((url) => {
+    // Movies never trigger a series lookup, so the user-items list is the only
+    // /Items call.
+    if (url.includes("/Users/")) {
+      return { body: { Items: [PLAYED_MOVIE], TotalRecordCount: 1 } };
+    }
+    return { body: USERS };
+  }, async () => {
+    await methods.watch_history.execute({ days: 30 }, context);
+  });
+  const w = getWrittenResources()[0].data;
+  assertEquals(w.itemType, "Movie");
+  assertEquals(w.imdbId, "tt1375666");
+  assertEquals(w.tmdbId, "27205");
+  assertEquals(w.tvdbId, null);
+  // Movies carry no parent-series / episode fields.
+  assertEquals(w.seriesTmdbId, null);
+  assertEquals(w.seriesImdbId, null);
+  assertEquals(w.seasonNumber, null);
+  assertEquals(w.episodeNumber, null);
+});
+
+Deno.test("watch_history: resolves an episode's series ids + season/episode numbers", async () => {
+  const { context, getWrittenResources } = createModelTestContext({
+    globalArgs: GLOBAL,
+  });
+  await withFetch((url) => {
+    // The series-provider lookup is a bare /Items?ids=got&Fields=ProviderIds.
+    if (url.includes("ids=got")) return { body: { Items: [SERIES_ITEM] } };
+    if (url.includes("/Users/")) {
+      return { body: { Items: [PLAYED_EPISODE], TotalRecordCount: 1 } };
+    }
+    return { body: USERS };
+  }, async () => {
+    await methods.watch_history.execute({ days: 30 }, context);
+  });
+  const w = getWrittenResources()[0].data;
+  assertEquals(w.itemType, "Episode");
+  // The episode's own provider id passes through...
+  assertEquals(w.tvdbId, "4517466");
+  // ...and the show-level ids are resolved from the parent series item.
+  assertEquals(w.seriesImdbId, "tt0944947");
+  assertEquals(w.seriesTmdbId, "1399");
+  assertEquals(w.seriesTvdbId, "121361");
+  assertEquals(w.seasonNumber, 3);
+  assertEquals(w.episodeNumber, 9);
+});
+
 Deno.test("watch_history: skips items whose last play is older than the cutoff", async () => {
   const { context, getWrittenResources } = createModelTestContext({
     globalArgs: GLOBAL,
@@ -160,7 +257,9 @@ Deno.test("playback_sessions: writes one playbackSession per event, parses serie
     globalArgs: GLOBAL,
   });
   await withFetch((url) => {
-    if (isQuery(url)) return { body: { columns: PB_COLUMNS, results: [PB_ROW] } };
+    if (isQuery(url)) {
+      return { body: { columns: PB_COLUMNS, results: [PB_ROW] } };
+    }
     return { body: [{ Id: "u1", Name: "jamesk" }] };
   }, async () => {
     await methods.playback_sessions.execute({ days: 30, limit: 5000 }, context);
@@ -182,7 +281,9 @@ Deno.test("playback_sessions: marks truncated when the row count hits the limit"
     globalArgs: GLOBAL,
   });
   await withFetch((url) => {
-    if (isQuery(url)) return { body: { columns: PB_COLUMNS, results: [PB_ROW] } };
+    if (isQuery(url)) {
+      return { body: { columns: PB_COLUMNS, results: [PB_ROW] } };
+    }
     return { body: [{ Id: "u1", Name: "jamesk" }] };
   }, async () => {
     await methods.playback_sessions.execute({ days: 30, limit: 1 }, context);
@@ -195,7 +296,9 @@ Deno.test("playback_sessions: still writes when the user lookup fails (best-effo
     globalArgs: GLOBAL,
   });
   await withFetch((url) => {
-    if (isQuery(url)) return { body: { columns: PB_COLUMNS, results: [PB_ROW] } };
+    if (isQuery(url)) {
+      return { body: { columns: PB_COLUMNS, results: [PB_ROW] } };
+    }
     return { status: 500, body: "boom" };
   }, async () => {
     await methods.playback_sessions.execute({ days: 30, limit: 5000 }, context);
@@ -214,7 +317,8 @@ Deno.test("playback_sessions: throws a plugin hint on 404 and writes nothing", a
     return { body: [{ Id: "u1", Name: "jamesk" }] };
   }, async () => {
     await assertRejects(
-      () => methods.playback_sessions.execute({ days: 30, limit: 5000 }, context),
+      () =>
+        methods.playback_sessions.execute({ days: 30, limit: 5000 }, context),
       Error,
       "Playback Reporting",
     );
