@@ -46,6 +46,59 @@ const WatchedItemSchema = z.object({
       "Tag for the parent series' primary image (poster) for episodes; " +
         "build a URL as {jellyfinUrl}/Items/{seriesId}/Images/Primary?tag={tag}",
     ),
+  imdbId: z
+    .string()
+    .nullable()
+    .describe(
+      "IMDb id (tt…) for this item from Jellyfin ProviderIds; " +
+        "link as https://www.imdb.com/title/{imdbId}. Null when unmatched.",
+    ),
+  tmdbId: z
+    .string()
+    .nullable()
+    .describe(
+      "TMDB id for this item from Jellyfin ProviderIds — the movie id for " +
+        "movies (link https://www.themoviedb.org/movie/{tmdbId}); for episodes " +
+        "this is the episode's own id, so prefer seriesTmdbId + season/episode " +
+        "numbers to build a show URL. Null when unmatched.",
+    ),
+  tvdbId: z
+    .string()
+    .nullable()
+    .describe("TheTVDB id for this item from Jellyfin ProviderIds, else null"),
+  seriesImdbId: z
+    .string()
+    .nullable()
+    .describe(
+      "Parent series IMDb id for episodes (resolved from the series item), " +
+        "else null",
+    ),
+  seriesTmdbId: z
+    .string()
+    .nullable()
+    .describe(
+      "Parent series TMDB id for episodes (the show id); link as " +
+        "https://www.themoviedb.org/tv/{seriesTmdbId}. Null for movies/unmatched.",
+    ),
+  seriesTvdbId: z
+    .string()
+    .nullable()
+    .describe("Parent series TheTVDB id for episodes, else null"),
+  seasonNumber: z
+    .number()
+    .nullable()
+    .describe(
+      "Season number for episodes (ParentIndexNumber); combine with " +
+        "seriesTmdbId + episodeNumber for a TMDB episode URL. Null for movies.",
+    ),
+  episodeNumber: z
+    .number()
+    .nullable()
+    .describe(
+      "Episode number within the season for episodes (IndexNumber); build a " +
+        "TMDB episode URL as https://www.themoviedb.org/tv/{seriesTmdbId}/" +
+        "season/{seasonNumber}/episode/{episodeNumber}. Null for movies.",
+    ),
   fetchedAt: z.string(),
 });
 
@@ -82,6 +135,35 @@ function headers(apiKey: string): Record<string, string> {
 /** Strip trailing slashes from a base URL. */
 function normUrl(u: string): string {
   return u.replace(/\/+$/, "");
+}
+
+/** The external ids we surface for linking (IMDb / TMDB / TheTVDB). */
+interface ProviderIds {
+  imdbId: string | null;
+  tmdbId: string | null;
+  tvdbId: string | null;
+}
+
+/**
+ * Pull IMDb / TMDB / TheTVDB ids out of a Jellyfin `ProviderIds` map. Jellyfin
+ * capitalises the keys ("Imdb", "Tmdb", "Tvdb") but we match case-insensitively
+ * to be safe. Missing/empty values become null.
+ */
+function pickProviderIds(
+  providerIds: Record<string, unknown> | null | undefined,
+): ProviderIds {
+  const entries = providerIds && typeof providerIds === "object"
+    ? Object.entries(providerIds)
+    : [];
+  const get = (key: string): string | null => {
+    for (const [k, v] of entries) {
+      if (k.toLowerCase() === key && v != null && String(v) !== "") {
+        return String(v);
+      }
+    }
+    return null;
+  };
+  return { imdbId: get("imdb"), tmdbId: get("tmdb"), tvdbId: get("tvdb") };
 }
 
 /**
@@ -130,7 +212,7 @@ export const extension = {
     {
       watch_history: {
         description:
-          "Pull recent play history from Jellyfin's core API (no plugin required) for the last N days. Fans out over ALL users and writes one resource per user/item with its most-recent play date, play count and runtime. Approximates watch time from item runtimes — it cannot see individual sessions or partial plays, but works immediately even before the Playback Reporting plugin has data.",
+          "Pull recent play history from Jellyfin's core API (no plugin required) for the last N days. Fans out over ALL users and writes one resource per user/item with its most-recent play date, play count, runtime, and external ids (IMDb/TMDB/TheTVDB, plus the parent series' ids and season/episode numbers for episodes) so items can be linked to IMDb/TMDB. Approximates watch time from item runtimes — it cannot see individual sessions or partial plays, but works immediately even before the Playback Reporting plugin has data.",
         arguments: z.object({
           days: z
             .number()
@@ -159,6 +241,37 @@ export const extension = {
           const batchSize = 200;
           let totalRuntime = 0;
 
+          // Episodes carry their own ProviderIds, but a link should point at the
+          // *show*, whose ids live on the parent series item. Resolve each
+          // distinct series once and cache it (many episodes share a series).
+          const seriesProviders = new Map<string, ProviderIds>();
+          const emptyProviders: ProviderIds = {
+            imdbId: null,
+            tmdbId: null,
+            tvdbId: null,
+          };
+          async function getSeriesProviders(seriesId: string) {
+            const cached = seriesProviders.get(seriesId);
+            if (cached) return cached;
+            let result = emptyProviders;
+            try {
+              const p = new URLSearchParams({
+                ids: seriesId,
+                Fields: "ProviderIds",
+              });
+              const resp = await fetch(`${url}/Items?${p}`, { headers: hdrs });
+              if (resp.ok) {
+                const d = await resp.json();
+                const series = (d.Items ?? [])[0];
+                if (series) result = pickProviderIds(series.ProviderIds);
+              }
+            } catch (_e) {
+              // Best-effort — a failed lookup just leaves the series ids null.
+            }
+            seriesProviders.set(seriesId, result);
+            return result;
+          }
+
           for (const user of users) {
             const userId = user.Id as string;
             const userName = (user.Name as string) ?? null;
@@ -173,7 +286,7 @@ export const extension = {
                 SortOrder: "Descending",
                 IncludeItemTypes: "Movie,Episode",
                 Fields:
-                  "UserData,RunTimeTicks,SeriesName,Genres,ImageTags,SeriesPrimaryImageTag",
+                  "UserData,RunTimeTicks,SeriesName,Genres,ImageTags,SeriesPrimaryImageTag,ProviderIds",
                 Limit: String(batchSize),
                 StartIndex: String(startIndex),
               });
@@ -202,6 +315,13 @@ export const extension = {
                 const runtimeSeconds = (it.RunTimeTicks ?? 0) / 10_000_000;
                 totalRuntime += runtimeSeconds;
                 const itemId = it.Id as string;
+                const seriesId = it.SeriesId ?? null;
+                const providers = pickProviderIds(it.ProviderIds);
+                // Resolve the parent show's ids so episodes can link to the
+                // series (and its TMDB episode page) rather than the raw episode.
+                const seriesProv = (it.Type ?? "") === "Episode" && seriesId
+                  ? await getSeriesProviders(seriesId)
+                  : emptyProviders;
                 const handle = await context.writeResource(
                   "watchedItem",
                   `${userId}-${itemId}`,
@@ -218,8 +338,20 @@ export const extension = {
                     runtimeSeconds,
                     genres: it.Genres ?? [],
                     primaryImageTag: it.ImageTags?.Primary ?? null,
-                    seriesId: it.SeriesId ?? null,
+                    seriesId,
                     seriesPrimaryImageTag: it.SeriesPrimaryImageTag ?? null,
+                    imdbId: providers.imdbId,
+                    tmdbId: providers.tmdbId,
+                    tvdbId: providers.tvdbId,
+                    seriesImdbId: seriesProv.imdbId,
+                    seriesTmdbId: seriesProv.tmdbId,
+                    seriesTvdbId: seriesProv.tvdbId,
+                    seasonNumber: typeof it.ParentIndexNumber === "number"
+                      ? it.ParentIndexNumber
+                      : null,
+                    episodeNumber: typeof it.IndexNumber === "number"
+                      ? it.IndexNumber
+                      : null,
                     fetchedAt: new Date().toISOString(),
                   },
                 );
