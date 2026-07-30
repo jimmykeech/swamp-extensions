@@ -1,0 +1,29 @@
+manifestVersion: 1
+name: "@jamesakeech/forgejo-code"
+version: "2026.07.30.1"
+description: "Code-reading methods for @shrug/forgejo — map a repository's file tree, read individual files, and snapshot every matching text file into one reviewable data blob. Turns a metadata-only forge node into a source for code review and IaC analysis."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Extends the @shrug/forgejo type; source, README, and LICENSE live alongside this manifest.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - forgejo-code.ts
+
+dependencies:
+  - "@shrug/forgejo"
+
+# Universal — the extension makes only HTTP calls, no platform-specific binaries.
+platforms: []
+
+labels:
+  - forgejo
+  - gitea
+  - git
+  - code-review
