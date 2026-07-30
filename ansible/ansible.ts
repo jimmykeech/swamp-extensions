@@ -119,7 +119,10 @@ export const GlobalArgsSchema = z.object({
     "Inventory path relative to workdir. Omit when supplying inventoryContent per run.",
   ),
   privateKeyPath: z.string().optional().describe(
-    "SSH private key for reaching managed hosts.",
+    "Path to an SSH private key already on the swamp host. Not itself a secret — a path. Use privateKey to supply the key material from a vault instead.",
+  ),
+  privateKey: z.string().optional().meta({ sensitive: true }).describe(
+    "SSH private key material (PEM). Written to a 0600 temp file for the run, so a serve host needs no key on disk. Takes precedence over privateKeyPath.",
   ),
   remoteUser: z.string().optional().describe("SSH user (ansible -u)."),
   vaultPassword: z.string().optional().meta({ sensitive: true }).describe(
@@ -195,13 +198,17 @@ export function buildArgs(
     inventory?: string;
     vaultPasswordFile?: string;
     extraVarsFile?: string;
+    privateKeyFile?: string;
   },
 ): string[] {
   const args: string[] = [g.playbook];
   if (mode === "check") args.push("--check", "--diff");
   if (paths.inventory) args.push("-i", paths.inventory);
   if (g.remoteUser) args.push("-u", g.remoteUser);
-  if (g.privateKeyPath) args.push("--private-key", g.privateKeyPath);
+  // Materialised key material wins over a path, so a vault-supplied key beats a
+  // stale one left on disk.
+  const keyFile = paths.privateKeyFile ?? g.privateKeyPath;
+  if (keyFile) args.push("--private-key", keyFile);
   if (paths.vaultPasswordFile) {
     args.push("--vault-password-file", paths.vaultPasswordFile);
   }
@@ -223,6 +230,28 @@ function tail(
 }
 
 /**
+ * Strip known secret values out of captured output before it is persisted.
+ *
+ * Ansible can echo extra-vars at high verbosity, and this model stores a tail of
+ * stdout as model data — so without this, a run with `verbosity: 4` could write
+ * `ansible_become_password` into the datastore. Redaction targets the values
+ * themselves rather than a pattern, so it holds however Ansible formats them.
+ */
+export function redactSecrets(
+  text: string,
+  secrets: (string | undefined)[],
+): string {
+  let out = text;
+  for (const secret of secrets) {
+    // Very short values are skipped: replacing them globally would mangle
+    // unrelated output for no real security gain.
+    if (!secret || secret.length < 6) continue;
+    out = out.split(secret).join("***REDACTED***");
+  }
+  return out;
+}
+
+/**
  * Run the playbook.
  *
  * Secrets go to 0600 files inside a 0700 temp dir, removed in `finally` — never
@@ -241,6 +270,7 @@ async function run(
     inventory?: string;
     vaultPasswordFile?: string;
     extraVarsFile?: string;
+    privateKeyFile?: string;
   } = {};
 
   try {
@@ -249,6 +279,18 @@ async function run(
       await Deno.writeTextFile(paths.inventory, args.inventoryContent);
     } else if (g.inventoryPath) {
       paths.inventory = g.inventoryPath;
+    }
+
+    if (g.privateKey) {
+      paths.privateKeyFile = `${tmp}/id_key`;
+      // ssh refuses a key file with loose permissions, so chmod before writing
+      // would be too late — create it, tighten it, then fill it.
+      await Deno.writeTextFile(paths.privateKeyFile, "");
+      await Deno.chmod(paths.privateKeyFile, 0o600);
+      const withNewline = g.privateKey.endsWith("\n")
+        ? g.privateKey
+        : g.privateKey + "\n";
+      await Deno.writeTextFile(paths.privateKeyFile, withNewline);
     }
 
     if (g.vaultPassword) {
@@ -296,9 +338,13 @@ async function run(
     }
 
     const decoder = new TextDecoder();
-    const stdout = decoder.decode(out.stdout);
-    const stderr = decoder.decode(out.stderr);
-    const hosts = parseRecap(stdout);
+    // Redact before anything is persisted or surfaced. Parsing runs on the raw
+    // text, since the recap never contains secrets and redaction could in
+    // principle disturb it.
+    const secrets = [g.becomePassword, g.vaultPassword, g.privateKey];
+    const stdout = redactSecrets(decoder.decode(out.stdout), secrets);
+    const stderr = redactSecrets(decoder.decode(out.stderr), secrets);
+    const hosts = parseRecap(decoder.decode(out.stdout));
     const status = deriveStatus(mode, hosts, out.code);
     const stdoutTail = tail(stdout);
 

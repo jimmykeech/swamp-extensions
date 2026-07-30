@@ -23,6 +23,7 @@ import {
   type HostRecap,
   model,
   parseRecap,
+  redactSecrets,
 } from "./ansible.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -197,6 +198,30 @@ Deno.test("buildArgs: secrets are never placed in argv", () => {
   assert(!joined.includes("sudo-secret-value"), "become password leaked to argv");
 });
 
+Deno.test("buildArgs: materialised key beats privateKeyPath", () => {
+  const g = GlobalArgsSchema.parse({
+    workdir: "/repo",
+    playbook: "p.yml",
+    privateKeyPath: "/stale/on/disk",
+  });
+  const args = buildArgs("apply", g, A, { privateKeyFile: "/tmp/x/id_key" })
+    .join(" ");
+  assertStringIncludes(args, "--private-key /tmp/x/id_key");
+  assert(!args.includes("/stale/on/disk"), "path should be superseded");
+});
+
+Deno.test("buildArgs: privateKey material never appears in argv", () => {
+  const g = GlobalArgsSchema.parse({
+    workdir: "/repo",
+    playbook: "p.yml",
+    privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\nSECRETKEYBYTES\n",
+  });
+  const joined = buildArgs("apply", g, A, { privateKeyFile: "/tmp/x/id_key" })
+    .join(" ");
+  assert(!joined.includes("SECRETKEYBYTES"), "key material leaked to argv");
+  assert(!joined.includes("BEGIN OPENSSH"), "key material leaked to argv");
+});
+
 Deno.test("buildArgs: tags, skip-tags, limit and verbosity", () => {
   const args = buildArgs("apply", G, {
     ...A,
@@ -209,6 +234,29 @@ Deno.test("buildArgs: tags, skip-tags, limit and verbosity", () => {
   assertStringIncludes(args, "--tags docker,users");
   assertStringIncludes(args, "--skip-tags slow");
   assertStringIncludes(args, "-vvv");
+});
+
+// ── redactSecrets ─────────────────────────────────────────────────────────────
+
+Deno.test("redactSecrets: removes secret values from captured output", () => {
+  const out = redactSecrets(
+    'ansible_become_password: "sup3r-s3cret-pw"\nvault: my-vault-pass',
+    ["sup3r-s3cret-pw", "my-vault-pass"],
+  );
+  assert(!out.includes("sup3r-s3cret-pw"));
+  assert(!out.includes("my-vault-pass"));
+  assertStringIncludes(out, "***REDACTED***");
+});
+
+Deno.test("redactSecrets: replaces every occurrence, not just the first", () => {
+  const out = redactSecrets("a longsecret b longsecret c", ["longsecret"]);
+  assertEquals(out, "a ***REDACTED*** b ***REDACTED*** c");
+});
+
+Deno.test("redactSecrets: skips undefined and very short values", () => {
+  // Redacting a 3-char value globally would mangle unrelated output.
+  assertEquals(redactSecrets("the cat sat", [undefined, "cat"]), "the cat sat");
+  assertEquals(redactSecrets("unchanged", []), "unchanged");
 });
 
 // ── execute paths, against a fake ansible-playbook ────────────────────────────
@@ -378,6 +426,107 @@ EOF`,
     e.name.startsWith("swamp-ansible-")
   ).length;
   assertEquals(after, before, "temp dir holding secrets was not cleaned up");
+});
+
+Deno.test("privateKey is materialised 0600 and removed after the run", async () => {
+  // The stub reports the mode of the key file it was handed, and its content
+  // length, so we can assert permissions without leaking the key.
+  const { dir, bin } = await fakeAnsible(
+    `prev=""
+for a in "$@"; do
+  if [ "$prev" = "--private-key" ]; then
+    echo "KEYMODE: $(stat -f '%Lp' "$a" 2>/dev/null || stat -c '%a' "$a")"
+    echo "KEYPATH: $a"
+    echo "KEYLEN: $(wc -c < "$a" | tr -d ' ')"
+  fi
+  prev="$a"
+done
+cat <<'EOF'
+PLAY RECAP ****
+h1                         : ok=1    changed=0    unreachable=0    failed=0
+EOF`,
+  );
+  const KEY = "-----BEGIN OPENSSH PRIVATE KEY-----\nSECRETKEYBYTES\n";
+  let keyPath = "";
+  try {
+    const { context, getWrittenResources } = createModelTestContext({
+      globalArgs: GlobalArgsSchema.parse({
+        workdir: dir,
+        playbook: "site.yml",
+        ansibleBin: bin,
+        privateKey: KEY,
+      }),
+    });
+    await methods.check.execute(methods.check.arguments.parse({}), context);
+    const d = dataOf(getWrittenResources()[0]);
+    assertStringIncludes(d.stdoutTail, "KEYMODE: 600");
+    assertStringIncludes(d.stdoutTail, `KEYLEN: ${KEY.length}`);
+    // The key must not be echoed anywhere in captured output.
+    assert(
+      !d.stdoutTail.includes("SECRETKEYBYTES"),
+      "key material appeared in captured output",
+    );
+    keyPath =
+      (d.stdoutTail.split("\n").find((l: string) => l.startsWith("KEYPATH: ")) ??
+        "").replace("KEYPATH: ", "").trim();
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
+  assert(keyPath.length > 0, "stub did not report the key path");
+  let stillThere = true;
+  try {
+    await Deno.stat(keyPath);
+  } catch {
+    stillThere = false;
+  }
+  assert(!stillThere, `key file survived the run: ${keyPath}`);
+});
+
+Deno.test("a playbook echoing extra-vars cannot leak secrets into stored data", async () => {
+  // Ansible dumps extra-vars at high verbosity. This stub simulates that by
+  // printing the extra-vars file, which is exactly the leak path into the
+  // datastore that redaction must close.
+  const { dir, bin } = await fakeAnsible(
+    `for a in "$@"; do
+  case "$a" in
+    @*) cat "$(echo "$a" | sed 's/^@//')" ;;
+  esac
+done
+echo ""
+cat <<'EOF'
+PLAY RECAP ****
+h1                         : ok=1    changed=0    unreachable=0    failed=0
+EOF`,
+  );
+  try {
+    const { context, getWrittenResources } = createModelTestContext({
+      globalArgs: GlobalArgsSchema.parse({
+        workdir: dir,
+        playbook: "site.yml",
+        ansibleBin: bin,
+        becomePassword: "sudo-p4ssw0rd-value",
+        vaultPassword: "vault-p4ssw0rd-value",
+      }),
+    });
+    await methods.check.execute(methods.check.arguments.parse({}), context);
+    const d = dataOf(getWrittenResources()[0]);
+    // The var *name* may legitimately appear; the value must not.
+    assertStringIncludes(d.stdoutTail, "ansible_become_password");
+    assert(
+      !d.stdoutTail.includes("sudo-p4ssw0rd-value"),
+      "become password reached persisted data",
+    );
+    assert(
+      !d.stdoutTail.includes("vault-p4ssw0rd-value"),
+      "vault password reached persisted data",
+    );
+    assertStringIncludes(d.stdoutTail, "***REDACTED***");
+    // Redaction must not disturb recap parsing.
+    assertEquals(d.status, "compliant");
+    assertEquals(d.hostCount, 1);
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
 });
 
 // ── integration: against real ansible-playbook when available ─────────────────

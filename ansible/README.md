@@ -66,16 +66,44 @@ Use `inventoryPath` instead when a checked-in inventory file is what you want.
 
 ## Secrets
 
-`vaultPassword` and `becomePassword` are marked sensitive and are **never placed
-in argv**, because argv is readable by any local user via the process list:
+`vaultPassword`, `becomePassword` and `privateKey` are marked sensitive and are
+**never placed in argv**, because argv is readable by any local user via the
+process list:
 
 - `vaultPassword` → a `0600` temp file passed to `--vault-password-file`
 - `becomePassword` → injected as `ansible_become_password` in a `0600` extra-vars
   file passed as `-e @file`
+- `privateKey` → a `0600` temp file passed to `--private-key`
 
-Both live in a `0700` temp directory removed in a `finally`, so an exception
-mid-run does not leave secrets behind. There is a test asserting the cleanup
-actually happens.
+All live in a `0700` temp directory removed in a `finally`, so an exception
+mid-run does not leave secrets behind. Tests assert both that the mode is `0600`
+and that the files are actually gone afterwards.
+
+### SSH keys: path or material
+
+`privateKeyPath` points at a key already on the host. `privateKey` takes the key
+material itself, from a vault, and materialises it for the run — so a
+`swamp serve` host can converge machines without a long-lived private key
+sitting on its disk. `privateKey` wins if both are set, so a vault-supplied key
+beats a stale one left on disk.
+
+Note that `privateKeyPath` is deliberately *not* marked sensitive: it is a path,
+not a secret, and vaulting the string `/root/.ssh/id_ed25519` would achieve
+nothing.
+
+### Captured output is redacted
+
+A tail of stdout is stored as model data, and Ansible echoes extra-vars at high
+verbosity — so `verbosity: 4` would otherwise write `ansible_become_password`
+into the datastore. Every sensitive value is stripped from captured stdout and
+stderr before anything is persisted, replaced with `***REDACTED***`. Redaction
+targets the values rather than a pattern, so it holds however Ansible formats
+them, and there is a test that makes a playbook deliberately echo the extra-vars
+file to confirm the value never reaches stored data.
+
+Values shorter than 6 characters are skipped, since replacing them globally would
+mangle unrelated output for no real gain. Don't rely on this for a two-character
+password.
 
 ## Quickstart
 
