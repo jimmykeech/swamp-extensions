@@ -1,0 +1,25 @@
+manifestVersion: 1
+name: "@jamesakeech/ansible"
+version: "2026.07.30.1"
+description: "Drive an existing Ansible playbook from swamp. `check` runs --check --diff and never mutates, so changed=0 across every host is a machine-readable 'already matches its declaration' gate; `apply` runs for real. Parses the PLAY RECAP into typed per-host tallies for CEL, accepts inventory as content so a workflow can build it from model data instead of a render script, and keeps vault and sudo passwords in 0600 temp files rather than argv."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest in ansible/.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - ansible.ts
+
+# Universal — shells out to the ansible-playbook already on the host.
+platforms: []
+
+labels:
+  - ansible
+  - configuration-management
+  - provisioning
