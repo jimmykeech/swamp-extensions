@@ -178,7 +178,13 @@ const CodeFileSchema = z.object({
   truncated: z.boolean(),
 });
 
-/** A file present in the tree but deliberately not read, with the reason why. */
+/**
+ * A file present in the tree but deliberately not read.
+ *
+ * `too_large` is a property of the file itself; `over_budget` means the file was
+ * fine but the run had already spent its `max_files` / `max_total_bytes` budget.
+ * Keeping them distinct tells a caller whether to raise a cap or accept the gap.
+ */
 const SkippedFileSchema = z.object({
   path: z.string(),
   size: z.number(),
@@ -186,6 +192,7 @@ const SkippedFileSchema = z.object({
     "excluded",
     "not_included",
     "too_large",
+    "over_budget",
     "binary",
     "missing",
   ]),
@@ -264,6 +271,14 @@ type Context = {
  */
 function instanceName(spec: string, owner: string, repo: string): string {
   return `${spec}__${owner}__${repo}`;
+}
+
+/**
+ * Locale-independent path comparator — matches git's own byte ordering, so a
+ * snapshot's file order is reproducible regardless of the host's locale.
+ */
+function byPath(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /** Collapse a file path into a filesystem-safe instance name fragment. */
@@ -543,7 +558,7 @@ export const extension = {
           skipped.push({
             path: entry.path,
             size: entry.size ?? 0,
-            reason: "too_large",
+            reason: "over_budget",
           });
         }
 
@@ -588,7 +603,7 @@ export const extension = {
               skipped.push({
                 path: entry.path,
                 size: bytes.length,
-                reason: "too_large",
+                reason: "over_budget",
               });
               return;
             }
@@ -616,8 +631,10 @@ export const extension = {
         );
 
         // Restore tree order so the snapshot reads like the repo, not the queue.
-        files.sort((a, b) => a.path.localeCompare(b.path));
-        skipped.sort((a, b) => a.path.localeCompare(b.path));
+        // Codepoint order, not localeCompare: locale-dependent sorting would
+        // reorder identical content across machines and churn data versions.
+        files.sort((a, b) => byPath(a.path, b.path));
+        skipped.sort((a, b) => byPath(a.path, b.path));
 
         const handle = await context.writeResource(
           "codebase",
