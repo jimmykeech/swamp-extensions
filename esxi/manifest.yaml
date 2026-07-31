@@ -21,8 +21,10 @@ models:
 # Needs an ssh client on the host running swamp (and sshpass for password auth),
 # so it is not universal.
 platforms:
-  - linux
-  - darwin
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
 
 labels:
   - vmware
