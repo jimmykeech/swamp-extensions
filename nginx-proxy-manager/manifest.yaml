@@ -1,0 +1,30 @@
+manifestVersion: 1
+name: "@jamesakeech/nginx-proxy-manager"
+# Kept aligned with the model's own version field.
+version: "2026.08.08.1"
+description: "Full lifecycle management of an Nginx Proxy Manager instance. `sync` fans out one resource per proxy host, redirection host, dead host, stream, access list and certificate, plus an instance rollup that flags expiring certificates, plain-HTTP hosts and domains claimed by more than one host. The `apply*` methods are idempotent — they match an existing object by its natural key (domain set, listening port, access list name) and update it in place, so re-running a workflow converges instead of accumulating duplicates. `setEnabled` and `delete` dispatch on an object kind and take a list of ids, so a batch is one fan-out call rather than a run per id. Let's Encrypt certificates can be requested over HTTP-01 or DNS-01 (wildcards included), renewed, or replaced with uploaded PEM files."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - nginx_proxy_manager.ts
+
+# Pure HTTP against the NPM admin API — no host tooling required, so this runs
+# anywhere swamp does.
+
+labels:
+  - nginx
+  - nginx-proxy-manager
+  - reverse-proxy
+  - networking
+  - homelab
+  - tls
+  - letsencrypt
