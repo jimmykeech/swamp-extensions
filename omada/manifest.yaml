@@ -1,0 +1,34 @@
+manifestVersion: 1
+name: "@jamesakeech/omada"
+version: "2026.08.08.1"
+description: "Observability and safe operational control for a TP-Link Omada controller. One fan-out sync reads every site, device, client, switch port, gateway WAN and SSID into addressable resources, and writes a drift record comparing configuration — not telemetry — against the previous sync, so an idle network reports nothing and a firmware bump, a re-addressed WAN, a disabled PoE port or a device that stopped answering each report themselves. Talks the supported Open API in client-credentials mode, with the controller's own web API as an optional fallback for reads the Open API does not expose. Writes are limited to reversible operational actions — reboot, PoE, client block, reconnect, LED, locate, firmware — each fanning out over a list in one controller session."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest in omada/.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - omada.ts
+
+# Pure fetch against the controller's HTTP API — no host tooling required.
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+
+labels:
+  - omada
+  - tp-link
+  - networking
+  - observability
+  - inventory
+  - drift
+  - poe
+  - wifi
