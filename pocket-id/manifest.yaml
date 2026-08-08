@@ -1,0 +1,33 @@
+manifestVersion: 1
+name: "@jamesakeech/pocket-id"
+# Kept aligned with the model's own version field.
+version: "2026.08.08.1"
+description: "Observability for a Pocket ID instance — the passkey-based OIDC provider. `health` is a cheap, admin-free probe that separates an unreachable host from a wrong API key from a key whose owner is not an admin, and reports version drift; it writes its result as data rather than throwing, so a failed run still leaves a truthful record. `sync` fans out one resource per user, OIDC client, group and API key, joins each user against their passkeys and their sign-ins and each client against its authorizations, then scores the whole instance into `instance.findings`: accounts with no passkey that therefore cannot sign in, public clients with PKCE disabled, clients nobody has authorized, empty groups, and the API key whose expiry will silently stop the sync. `syncActivity` reads a bounded window of the audit log on its own — Pocket ID has no date filter, so the window is applied by walking newest-first and stopping early, which makes a short window genuinely cheap. Read-only throughout."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - pocket_id.ts
+
+# Pure HTTP against the Pocket ID admin API — no host tooling required, so this
+# runs anywhere swamp does.
+
+labels:
+  - pocket-id
+  - oidc
+  - openid-connect
+  - sso
+  - passkeys
+  - webauthn
+  - identity
+  - observability
+  - audit-log
+  - homelab
