@@ -1,0 +1,34 @@
+manifestVersion: 1
+name: "@jamesakeech/technitium"
+# Kept aligned with the model's own version field.
+version: "2026.08.15.1"
+description: "Manage a Technitium DNS server or cluster: zones, records, block/allow lists, cache, diagnostics, settings backup and restore, and cluster membership. Written after rebuilding a live authoritative pair, and shaped by what that exposed. `record_ensure` is an idempotent upsert Technitium's own API cannot express — add fails on an existing record, update fails on an absent one — and it works for every record type including TLSA, because the read and write field names for TLSA, SSHFP and URI are not the same names and are mapped per type rather than renamed globally. `settings_backup` includes every section by default, so it produces a backup a server can actually be rebuilt from. `cluster_init`, `cluster_join` and `cluster_state` cover the membership a settings backup can never carry, alongside the TLS listener and certificate it also omits — the three things that make a restored node look broken."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest in technitium/.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - technitium.ts
+
+# Pure HTTP against the Technitium web service API — no host tooling required,
+# so this runs anywhere swamp does.
+
+labels:
+  - technitium
+  - dns
+  - dns-server
+  - authoritative-dns
+  - dnssec
+  - tlsa
+  - dane
+  - zone-management
+  - cluster
+  - ad-blocking
+  - homelab
