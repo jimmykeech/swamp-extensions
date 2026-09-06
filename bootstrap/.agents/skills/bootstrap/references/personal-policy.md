@@ -78,7 +78,9 @@ permissions into a new repository without verifying that they apply there.
   it.
 - Use model methods for integrations and Swamp workflows for repeatable
   orchestration. Wire existing outputs with CEL instead of re-fetching them.
-- Preserve the Swamp-managed section of `AGENTS.md`.
+- Preserve Swamp-managed sections in all native instruction files used by the
+  selected agents. Do not require one agent's file names or skill layout for
+  another agent.
 - Allocate one software-factory instance and one verification workflow per work
   item. Shared accepted templates are configuration, not shared execution
   instances.

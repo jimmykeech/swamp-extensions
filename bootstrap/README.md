@@ -1,6 +1,7 @@
 # @jamesakeech/bootstrap
 
-Bootstrap a Codex project with an accepted architecture control plane and one
+Bootstrap a project for any agent with native Swamp integration, including
+Claude, Pi, and Codex. Create an accepted architecture control plane and one
 Swamp software-factory instance per work item.
 
 The agent designs the project and writes its documents. The extension snapshots
@@ -11,18 +12,40 @@ engine.
 
 ## Install and use
 
-Run these commands inside the project repository. Initialize only when Swamp is
-not already configured:
+Use the project's selected agent and its native Swamp skills. Check the
+installed CLI before initializing a new repository:
 
 ```sh
-swamp repo init --tool codex
+swamp help repo init
+```
+
+If `.swamp.yaml` is absent, run the following inside the project repository.
+Replace `<selected-tool>` with the chosen tool ID, such as `claude`, `pi`, or
+`codex`, when supported by the installed CLI:
+
+```sh
+swamp repo init --tool <selected-tool>
 swamp extension pull @jamesakeech/bootstrap
 ```
 
-Then ask your agent:
+Swamp supports built-in integrations and configured custom tools. Its
+[`tools` configuration](https://swamp-club.com/manual/reference/repository-configuration#tools)
+controls native instruction and skill locations. Current Swamp documentation
+includes [Pi integration](https://swamp-club.com/manual/how-to/ai-agents/pi),
+but older CLIs may not include it. Bootstrap does not install or upgrade the
+agent or Swamp itself.
 
-> Use $bootstrap to configure this project for agentic coding with Swamp
-> factories.
+For an existing Swamp repository, keep its current tool enrollments. Pull the
+extension without reinitializing. If another integration is needed, inspect
+`swamp help repo upgrade` and preserve the full existing tool list and its order
+when adding it. Do not use forced reinitialization. Verify that the active agent
+can load both bundled skills from its native skill location.
+
+Then select the `bootstrap` skill using your agent's native skill mechanism, or
+ask:
+
+> Use the bootstrap skill to configure this project for agentic coding with
+> Swamp factories.
 
 The bundled skill conducts the design conversation, uses the personal working
 profile, and guides validation and explicit baseline acceptance. It installs and
@@ -36,6 +59,12 @@ The default project configuration is `docs/bootstrap/project.json`. See the
 for the required seven document roles and a complete Deno example. See the
 [working profile](.agents/skills/bootstrap/references/personal-policy.md) for
 the starting policy. Architecture and language choices remain project-specific.
+
+`agentTool` records the baseline's chosen default agent. It does not restrict
+which Swamp-integrated agent can drive a factory. Instruction and skill paths
+come from the project's actual native setup, not a fixed `AGENTS.md` or
+`.agents/skills` layout. Bootstrap validates the listed project files; Swamp and
+the agent remain responsible for native integration and skill discovery.
 
 ## Lifecycle
 
@@ -108,9 +137,11 @@ definitions through the normal Swamp CLI and preserves the IDs it returns.
   existing integration's read method. The agent invokes it; bootstrap does not
   poll, create issues, or synchronize tracker state.
 - The model does not overwrite project documents. The agent preserves manual
-  edits and Swamp-managed instructions. Keep secrets out of snapshots. File
-  checks reject symlinks and private paths but do not replace a content-level
-  secret review.
+  edits and Swamp-managed sections in every selected instruction file. Accepted
+  instructions and skills must be real files inside the repository, including
+  when an agent normally loads global skills. Keep secrets out of snapshots.
+  File checks reject symlinks and private paths but do not replace a
+  content-level secret review.
 - Review and cycle limits use the native factory engine. Reaching `ready` does
   not authorize pushing, publishing, deploying, or changing external systems.
 

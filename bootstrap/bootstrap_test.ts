@@ -7,6 +7,7 @@ import {
   type Context,
   ENGINE_VERSION,
   type Project,
+  ProjectSchema,
   RegistrySchema,
   VERSION,
 } from "./schema.ts";
@@ -21,19 +22,31 @@ interface Fixture {
 
 async function withProject(
   test: (fixture: Fixture) => Promise<void>,
+  agent: {
+    tool: string;
+    instructions: string[];
+    skillsDir: string;
+  } = {
+    tool: "codex",
+    instructions: ["AGENTS.md"],
+    skillsDir: ".agents/skills",
+  },
 ): Promise<void> {
   const root = await Deno.realPath(
     await Deno.makeTempDir({ prefix: "bootstrap-controller-" }),
   );
   const documents: Project["documents"] = [
-    { role: "instructions", path: "AGENTS.md" },
+    ...agent.instructions.map((file) => ({
+      role: "instructions" as const,
+      path: file,
+    })),
     { role: "conventions", path: "docs/conventions.md" },
     { role: "system-context", path: "docs/architecture/L1-system-context.md" },
     { role: "containers", path: "docs/architecture/L2-containers.md" },
     { role: "decision", path: "docs/adr/001-design.md" },
     {
       role: "architecture-skill",
-      path: ".agents/skills/project-architecture/SKILL.md",
+      path: `${agent.skillsDir}/project-architecture/SKILL.md`,
     },
     { role: "review-guidance", path: "docs/review.md" },
   ];
@@ -42,7 +55,7 @@ async function withProject(
     projectId: "example-project",
     title: "Example project",
     purpose: "Exercise local bootstrap contracts without external systems.",
-    agentTool: "codex",
+    agentTool: agent.tool,
     documents,
     decisions: ["Use one project repository."],
     skills: ["project-architecture"],
@@ -117,6 +130,97 @@ const approval = {
   reference: "local-review-record",
   validation: "local-template-validation-record",
 };
+
+Deno.test("native agent layouts survive inspect, acceptance, intake, and pinned context", async () => {
+  for (
+    const agent of [
+      {
+        tool: "codex",
+        instructions: ["AGENTS.md"],
+        skillsDir: ".agents/skills",
+      },
+      {
+        tool: "claude",
+        instructions: ["CLAUDE.md"],
+        skillsDir: ".claude/skills",
+      },
+      { tool: "pi", instructions: ["AGENTS.md"], skillsDir: ".pi/skills" },
+      { tool: "pi", instructions: ["AGENTS.md"], skillsDir: ".agents/skills" },
+      {
+        tool: "custom-agent",
+        instructions: [".custom/instructions.md"],
+        skillsDir: ".custom/project-skills",
+      },
+      {
+        tool: "claude",
+        instructions: ["CLAUDE.md", "AGENTS.md"],
+        skillsDir: ".claude/skills",
+      },
+    ]
+  ) {
+    await withProject(async ({ root, spec, context, data, saveSpec }) => {
+      for (const tool of ["none", "", "../claude"]) {
+        assert.equal(
+          ProjectSchema.safeParse({ ...spec, agentTool: tool }).success,
+          false,
+        );
+      }
+      await model.methods.inspect.execute({}, context);
+      assert.equal(
+        data.get("inspection")?.instructionsPresent,
+        true,
+        agent.tool,
+      );
+      const missing = path.join(root, agent.instructions.at(-1)!);
+      const original = await Deno.readTextFile(missing);
+      await Deno.remove(missing);
+      await model.methods.inspect.execute({}, context);
+      assert.equal(data.get("inspection")?.instructionsPresent, false);
+      await assert.rejects(
+        () => model.methods.check.execute({}, context),
+        Deno.errors.NotFound,
+      );
+      assert.equal(data.has("candidate"), false);
+      await Deno.writeTextFile(missing, original);
+
+      spec.skills = ["missing-skill"];
+      await saveSpec();
+      await assert.rejects(
+        () => model.methods.check.execute({}, context),
+        /Include the selected skill/,
+      );
+      spec.skills = ["project-architecture"];
+      await saveSpec();
+      await model.methods.check.execute({}, context);
+      const candidate = BaselineSchema.parse(data.get("candidate"));
+      assert.equal(candidate.spec.agentTool, agent.tool);
+      await model.methods.accept.execute({
+        baselineId: candidate.baselineId,
+        ...approval,
+      }, context);
+      await model.methods.intake.execute({
+        reference: "LOCAL-1",
+        provider: "local",
+        workspace: ".",
+      }, context);
+      const item = RegistrySchema.parse(data.get("registry")).items[0];
+      await model.methods.context.execute({ workItem: item.workItem }, context);
+      assert.deepEqual(
+        data.get(`context-${item.workItem}`)?.spec,
+        candidate.spec,
+      );
+      assert.deepEqual(
+        data.get(`context-${item.workItem}`)?.documents,
+        candidate.documents,
+      );
+
+      await Deno.remove(path.join(root, context.globalArgs.specPath));
+      await model.methods.inspect.execute({}, context);
+      assert.equal(data.get("inspection")?.configured, false);
+      assert.equal(data.get("inspection")?.instructionsPresent, false);
+    }, agent);
+  }
+});
 
 Deno.test("accepted baseline is exact, intake is idempotent, and existing context stays pinned", async () => {
   await withProject(async ({ root, context, data }) => {

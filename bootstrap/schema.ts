@@ -2,7 +2,7 @@
 import { z } from "npm:zod@4";
 
 /** Extension release tested against the official factory engine. */
-export const VERSION = "2026.09.06.2";
+export const VERSION = "2026.09.06.3";
 /** Official engine version supported by this release. */
 export const ENGINE_VERSION = "2026.06.24.1";
 /** Content-addressed identifier. */
@@ -29,7 +29,12 @@ export const ProjectSchema = z.strictObject({
   projectId: Name,
   title: Text,
   purpose: Text,
-  agentTool: z.literal("codex"),
+  agentTool: z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/).refine(
+    (tool) => tool !== "none",
+    "Select a Swamp-integrated agent; 'none' does not install agent scaffolding.",
+  ).describe(
+    "Selected Swamp agent tool ID; verify enrollment with the bootstrap skill",
+  ),
   documents: z.array(z.strictObject({
     role: z.enum([
       "instructions",
