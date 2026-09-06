@@ -1,6 +1,6 @@
 # Validation
 
-## 2026.09.06.5 — local architecture-choice update
+## 2026.09.06.5 — published architecture-choice update
 
 - Focused controller/report tests: 8 passed, 0 failed. The new regression pins a
   custom non-DDD decision and review skill through candidate capture,
@@ -17,7 +17,7 @@
   read-only rules to reviews. An unresolved choice stopped at the DDD-or-other
   question without choosing an architecture.
 - These were controlled agent exercises, not live Claude/Pi native sessions.
-  Native discovery and a complete baseline-to-delivery run with generated
+  Live agent discovery and a complete baseline-to-delivery run with generated
   architecture skills remain unverified.
 - The updated lifecycle smoke fixture passed type checking. Its new review skill
   file has valid frontmatter. The full lifecycle was not rerun because
@@ -29,7 +29,15 @@
 - Local package dry-run passed with no warnings and a current content-bound
   review. It includes the new architecture-choice reference in the bootstrap
   skill bundle.
-- Not pushed or published. The published release remains `.4`.
+- Registry publication: public stable `@jamesakeech/bootstrap@2026.09.06.5`.
+  Swamp format/lint and package dry-run passed with no warnings. The quality
+  check earned all 12 client-checkable points. The registry confirmed `.5` as
+  latest stable.
+- Fresh registry installation: passed in a separate Claude-only repository with
+  no source links. Both bundled skills, the new architecture reference, and the
+  updated project-spec reference matched the reviewed source exactly. Model
+  creation selected `.5`; native `CLAUDE.md` was present and `AGENTS.md` was
+  absent. This verifies packaging, not a live architecture interview.
 
 Focused commands, run from `bootstrap/` with the installed Deno runtime:
 
