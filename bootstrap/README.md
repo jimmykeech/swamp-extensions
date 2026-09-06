@@ -32,6 +32,33 @@ comes before setup requirements and strict configuration checks. A draft is not
 approval: the final architecture baseline still needs your explicit acceptance.
 An existing accepted baseline or work item resumes without repeating onboarding.
 
+## Choose your architecture
+
+After discovering the project, the agent asks whether to use domain-driven
+design (DDD), the recommended default, or another architecture approach. DDD is
+also
+[Swamp's own design approach](https://github.com/swamp-club/swamp/blob/main/AGENTS.md).
+The agent explains the trade-offs and waits for your choice. It reuses a choice
+you have already made rather than asking again.
+
+You can choose another approach, combine compatible principles, or describe your
+own rules. For example, use vertical slices, ports and adapters, layered
+architecture, or a functional core. These can complement DDD; deployment and
+language remain separate choices. DDD does not automatically add microservices,
+CQRS, event sourcing, or unnecessary domain patterns.
+
+The agent records your choice in the brief and foundation ADR. It creates
+project-local `project-architecture` and `project-architecture-review` skills,
+or reuses equivalent existing skills. Their boundaries, examples, test guidance,
+and review criteria match the selected approach. It inventories and pins these
+files in the accepted baseline so later factory stages use the same rules.
+Existing accepted projects are not automatically converted to DDD.
+
+See the
+[architecture guidance](.agents/skills/bootstrap/references/architecture.md) for
+selection and skill generation. These are native-agent actions; the CLI does not
+conduct the interview or generate skill text.
+
 ## Native Swamp setup
 
 Use the project's selected agent and its native Swamp skills. Check the

@@ -39,7 +39,13 @@ the baseline. Keep the original snapshot paths and contents unchanged.
    with Swamp data commands and read its payload. This field does not
    automatically inject anything into the coding agent. The physical artifact
    name is `artifact-<workItem>-<artifact-name>`. Query or retrieve only this
-   factory's data.
+   factory's data. Once project context is imported, use its pinned contents for
+   project skills listed in `work.skills`. The bundled `bootstrap-factory`
+   driver is loaded separately. Apply architecture skills to design and
+   implementation, and the corresponding review criteria during plan and code
+   review. Review-only instructions do not make implementation stages read-only.
+   Follow the baseline's chosen philosophy; do not substitute DDD or another
+   default when it selected something else.
 4. Perform the current work in the reserved workspace. Record declared artifacts
    or evidence using their exact schemas. Use `advance` with a satisfied
    transition. Do not skip gates or manufacture evidence to force progress.

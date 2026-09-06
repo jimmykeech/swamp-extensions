@@ -13,7 +13,9 @@ allocate Swamp IDs, or execute coding agents.
 Load the installed `swamp` skill for CLI operations. Read
 [project-spec.md](references/project-spec.md) when creating or changing a
 baseline. Read [personal-policy.md](references/personal-policy.md) when drafting
-the project's working agreements. Current user instructions take precedence over
+the project's working agreements. Read
+[architecture.md](references/architecture.md) when selecting a design philosophy
+or creating its project skills. Current user instructions take precedence over
 this profile.
 
 ## Start or resume the conversation
@@ -35,7 +37,9 @@ For a project without accepted configuration:
 2. Ask one missing question at a time. Establish purpose and users, then the
    first useful version, then constraints that materially affect design. Skip
    answers already supplied. Do not present a questionnaire or ask the user to
-   write JSON. After each question, wait for the answer.
+   write JSON. After each question, wait for the answer. Once the project and
+   its constraints are understood, explicitly offer the architecture choice
+   below before drafting its design.
 3. Accept "not sure". Offer a short recommendation and explain its trade-off.
    Continue with explicit low-risk assumptions where appropriate. Do not invent
    approval or silently settle a material design decision.
@@ -59,6 +63,27 @@ discarding the draft or acceptance history. `ready-for-check` means proceed to
 strict `check`, not that validation or acceptance has passed. The CLI returns
 data; it does not launch an agent or conduct this conversation itself.
 
+## Choose the architecture philosophy
+
+For a new project with no selected approach, briefly explain that domain-driven
+design (DDD) organizes software around business concepts and rules. Then ask:
+
+> Would you like to use domain-driven design (DDD), the recommended default, or
+> another architecture approach?
+
+Wait for the answer. Accept a named approach, a combination, or the user's own
+principles. Offer a few relevant alternatives if helpful, not a fixed menu. If
+the user is unsure, explain the fit and trade-offs and ask whether to use the
+recommendation. Do not treat silence as selecting DDD. Reuse a choice already
+stated in the conversation, brief, or authoritative project documents. Resolve
+conflicting choices with the user instead of overwriting them.
+
+Record the selection, rationale, boundaries, and any agreed combination in the
+brief and foundation ADR. Follow [architecture.md](references/architecture.md)
+to create project-local implementation and review skills for that choice. The
+default does not migrate existing accepted baselines or impose a language,
+framework, deployment topology, or unnecessary DDD patterns.
+
 ## Project bootstrap
 
 1. Continue from the discovered brief or existing accepted project. Inspect the
@@ -81,8 +106,8 @@ data; it does not launch an agent or conduct this conversation itself.
 3. Use the discovered purpose, users, first useful version, and material
    constraints to design the project. Resolve remaining questions about scope,
    external systems, or quality goals one at a time. Explain architectural
-   alternatives where needed. Do not impose a language, framework, DDD, or
-   distributed deployment by default.
+   alternatives where needed. Use the selected philosophy and its agreed scope;
+   DDD is the recommendation only when no choice exists.
 4. Write the seven document roles and structured project specification from the
    brief using the reference. Do not require the user to supply hand-written
    JSON. Set `agentTool` to the selected default agent's tool ID. Inventory the
@@ -90,7 +115,9 @@ data; it does not launch an agent or conduct this conversation itself.
    integration. Preserve Swamp-managed sections in every selected instruction
    file. Use the active agent's normal file-editing tools. Write concrete
    architecture boundaries, a justified decision record, language-specific
-   examples, and actionable review guidance. Include referenced skill files and
+   examples, and actionable review guidance. Generate the chosen approach's
+   architecture and architecture-review skills using the architecture reference.
+   Add their names to `spec.skills`. Include referenced skill files and
    supporting references in the document inventory when they are needed by later
    factory stages. If a needed skill is installed globally, create a reviewed
    project-local copy for the accepted inventory; do not snapshot external paths
@@ -118,6 +145,8 @@ data; it does not launch an agent or conduct this conversation itself.
    `validate` method. Check each installed dependency version, runner input
    schema, check command, workspace binding, and required output. Also verify
    the selected native integration and its instruction and skill locations.
+   Check that the chosen philosophy, ADR, conventions, and generated skills
+   agree, and that the preview lists both project skills on interactive stages.
    Bootstrap's structural checks do not verify agent enrollment or native skill
    discovery. Write the successful results to
    `docs/bootstrap/validation-<baselineId>.md`. Keep this transcript outside

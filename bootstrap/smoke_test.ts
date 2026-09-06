@@ -208,6 +208,8 @@ Deno.test({
       if (doc.path === "AGENTS.md") continue;
       const content = doc.role === "architecture-skill"
         ? "---\nname: project-architecture\ndescription: Keep the arithmetic module pure.\n---\nUse typed pure functions. Keep I/O outside src/sum.ts.\n"
+        : doc.path.endsWith("/project-architecture-review/SKILL.md")
+        ? "---\nname: project-architecture-review\ndescription: Review arithmetic plans and code for pure-function boundaries.\n---\nDuring review, check that src/sum.ts has no I/O and tests cover positive and negative operands. Do not edit source during review.\n"
         : `# ${doc.role}\n\nKeep a single typed arithmetic module. Users call sum in-process. No network, storage, or deployment is required. Verify positive and negative operands using Deno tests.\n`;
       await write(doc.path, content);
     }

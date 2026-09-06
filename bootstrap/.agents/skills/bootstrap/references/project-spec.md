@@ -10,9 +10,9 @@ of these files.
 The user does not need to supply this JSON to start. The native agent first
 collects the missing project details in conversation and writes them to
 `docs/bootstrap/brief.md`. Keep the purpose, users, first useful version,
-material constraints, explicit assumptions, open questions, and next step there
-as they become known. Read and preserve the draft on resume. Do not store
-secrets or label the brief as an accepted baseline.
+material constraints, chosen architecture philosophy, explicit assumptions, open
+questions, and next step there as they become known. Read and preserve the draft
+on resume. Do not store secrets or label the brief as an accepted baseline.
 
 The brief is a working note, not controller configuration. Keep it outside
 `documents`; transfer its confirmed details into the required documents and
@@ -30,6 +30,14 @@ the generic question. `ready-for-check` is not evidence of baseline validity,
 acceptance, native agent readiness, or passing project tests.
 
 ## Required control plane
+
+Record the selected philosophy and rationale in the foundation ADR and summarize
+them in `decisions`. DDD is the offered default, not a mandatory schema value.
+Do not add a new `architecture` JSON field. Follow
+[architecture.md](architecture.md) to generate matching architecture and review
+skills. Add both names to `skills` and their files and needed references to
+`documents`. Existing accepted configurations remain valid without new fields or
+an automatic skill migration.
 
 Include at least one document for each role. Paths must be unique. Do not list
 the project JSON itself; the controller adds it to the snapshot automatically.
@@ -96,8 +104,9 @@ This example configures a small arithmetic module with Codex as the selected
 default agent. Codex and these paths are examples, not requirements. Replace
 `agentTool` and the instruction and skill paths with the project's actual native
 setup. Replace its product purpose, decisions, and documents with the project's
-real design. The seven referenced files must exist and contain reviewed
-project-specific content before `check` succeeds.
+real design. This example selects a functional core instead of DDD-specific
+modelling for a small pure library. All referenced files must exist and contain
+reviewed project-specific content before `check` succeeds.
 
 ```json
 {
@@ -119,15 +128,19 @@ project-specific content before `check` succeeds.
       "role": "architecture-skill",
       "path": ".agents/skills/project-architecture/SKILL.md"
     },
-    { "role": "review-guidance", "path": "docs/review-guidance.md" }
+    { "role": "review-guidance", "path": "docs/review-guidance.md" },
+    {
+      "role": "review-guidance",
+      "path": ".agents/skills/project-architecture-review/SKILL.md"
+    }
   ],
   "decisions": [
-    "Keep arithmetic pure and independent of I/O; expose one typed module.",
+    "Choose a functional core for this small library instead of DDD-specific modelling; keep arithmetic pure and independent of I/O.",
     "Use Deno's built-in test runner for the initial verification check."
   ],
-  "skills": ["project-architecture"],
+  "skills": ["project-architecture", "project-architecture-review"],
   "dependencies": [
-    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.4" },
+    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.5" },
     { "name": "@swamp/software-factory", "version": "2026.06.24.1" },
     { "name": "@swamp/deno-runner", "version": "2026.08.23.1" }
   ],

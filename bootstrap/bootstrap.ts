@@ -453,7 +453,7 @@ async function verifyInputs(
 /** Bootstrap controller. Keep exactly one instance per project repository. */
 export const model = {
   type: "@jamesakeech/bootstrap",
-  version: "2026.09.06.4",
+  version: "2026.09.06.5",
   upgrades: [{
     toVersion: "2026.09.06.2",
     description:
@@ -468,6 +468,11 @@ export const model = {
     toVersion: "2026.09.06.4",
     description:
       "Guide first-run project discovery; preserve existing specPath arguments and accepted baselines.",
+    upgradeAttributes: (old: Record<string, unknown>) => old,
+  }, {
+    toVersion: "2026.09.06.5",
+    description:
+      "Offer architecture philosophy selection and matching skills; preserve arguments and accepted baselines.",
     upgradeAttributes: (old: Record<string, unknown>) => old,
   }],
   reports: ["@jamesakeech/bootstrap/readiness"],

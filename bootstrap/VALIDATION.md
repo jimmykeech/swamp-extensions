@@ -1,5 +1,43 @@
 # Validation
 
+## 2026.09.06.5 — local architecture-choice update
+
+- Focused controller/report tests: 8 passed, 0 failed. The new regression pins a
+  custom non-DDD decision and review skill through candidate capture,
+  acceptance, intake, and context retrieval. Every interactive factory stage
+  receives both selected project skills.
+- Both bundled skills passed skill-creator structural validation. The complete
+  reference JSON passed `ProjectSchema`, lists both skills in its document
+  inventory, and pins the current bootstrap version.
+- Independent skill exercise produced separate DDD and user-defined
+  functional-core draft skills and ADRs in an isolated directory. Inspection
+  confirmed domain lending invariants for the DDD case and the user's exact
+  transform/I/O/CLI boundaries without domain classes or repositories for the
+  custom case. Both review skills retain the factory findings format and scope
+  read-only rules to reviews. An unresolved choice stopped at the DDD-or-other
+  question without choosing an architecture.
+- These were controlled agent exercises, not live Claude/Pi native sessions.
+  Native discovery and a complete baseline-to-delivery run with generated
+  architecture skills remain unverified.
+- The updated lifecycle smoke fixture passed type checking. Its new review skill
+  file has valid frontmatter. The full lifecycle was not rerun because
+  controller method behavior and factory execution templates did not change.
+- Pre-test review found no remaining blocker. It corrected the driver guidance
+  to load pinned project skills after context import while loading the bundled
+  driver separately. The `.5` no-op upgrade retains existing arguments and
+  accepted baselines; no required architecture field was introduced.
+- Local package dry-run passed with no warnings and a current content-bound
+  review. It includes the new architecture-choice reference in the bootstrap
+  skill bundle.
+- Not pushed or published. The published release remains `.4`.
+
+Focused commands, run from `bootstrap/` with the installed Deno runtime:
+
+```sh
+deno test --allow-read --allow-write bootstrap_test.ts readiness_test.ts
+deno check smoke_test.ts
+```
+
 ## 2026.09.06.4 — published guided-onboarding update
 
 - Focused controller/report tests: 7 passed, 0 failed. The new regression covers
