@@ -52,10 +52,21 @@ const ReadinessSchema = z.strictObject({
 });
 const InspectionSchema = z.strictObject({
   specPath: Text,
-  configured: z.boolean(),
+  configured: z.boolean().describe(
+    "The project specification file exists, even if incomplete",
+  ),
+  acceptedBaselineId: Digest.nullable(),
   instructionsPresent: z.boolean().describe(
     "All instructions documents listed in the project specification exist; false without a configured inventory",
   ),
+  status: z.enum([
+    "needs-details",
+    "needs-configuration",
+    "ready-for-check",
+    "invalid-configuration",
+  ]),
+  nextQuestion: Text.nullable(),
+  issues: z.array(Text),
   nextAction: Text,
 });
 const DigestSchema = z.strictObject({
@@ -442,7 +453,7 @@ async function verifyInputs(
 /** Bootstrap controller. Keep exactly one instance per project repository. */
 export const model = {
   type: "@jamesakeech/bootstrap",
-  version: "2026.09.06.3",
+  version: "2026.09.06.4",
   upgrades: [{
     toVersion: "2026.09.06.2",
     description:
@@ -452,6 +463,11 @@ export const model = {
     toVersion: "2026.09.06.3",
     description:
       "Support native Swamp agent layouts; preserve existing specPath arguments and accepted baselines.",
+    upgradeAttributes: (old: Record<string, unknown>) => old,
+  }, {
+    toVersion: "2026.09.06.4",
+    description:
+      "Guide first-run project discovery; preserve existing specPath arguments and accepted baselines.",
     upgradeAttributes: (old: Record<string, unknown>) => old,
   }],
   reports: ["@jamesakeech/bootstrap/readiness"],
@@ -471,7 +487,7 @@ export const model = {
   methods: {
     inspect: {
       description:
-        "Inspect the project entry points without changing project files.",
+        "Inspect project entry points and return the next onboarding action for the active agent; change no project files.",
       kind: "read" as const,
       arguments: Empty,
       execute: async (
@@ -479,32 +495,92 @@ export const model = {
         context: Context,
       ): Promise<Result> => {
         context.logger.info("Inspecting bootstrap entry points");
-        const exists = async (path: string): Promise<boolean> => {
+        const readOptional = async (path: string): Promise<string | null> => {
           try {
-            await readProjectText(context.repoDir, path);
-            return true;
+            return await readProjectText(context.repoDir, path);
           } catch (error) {
-            if (error instanceof Deno.errors.NotFound) return false;
+            if (error instanceof Deno.errors.NotFound) return null;
             throw error;
           }
         };
-        const configured = await exists(context.globalArgs.specPath);
-        const instructions = configured
-          ? ProjectSchema.parse(JSON.parse(
-            await readProjectText(context.repoDir, context.globalArgs.specPath),
-          )).documents.filter((doc) => doc.role === "instructions")
-          : [];
-        const instructionsPresent = instructions.length > 0 &&
-          (await Promise.all(instructions.map((doc) => exists(doc.path))))
-            .every(Boolean);
-        return emit(context, "inspection", "inspection", {
+        const text = await readOptional(context.globalArgs.specPath);
+        const current = await context.readResource("registry");
+        const acceptedBaselineId = current
+          ? RegistrySchema.parse(current).baselineId
+          : null;
+        const inspection: z.infer<typeof InspectionSchema> = {
           specPath: context.globalArgs.specPath,
-          configured,
-          instructionsPresent,
-          nextAction: configured
-            ? "Run check and review the candidate baseline."
-            : "Use the bootstrap skill to agree the project design and create the control-plane files.",
-        });
+          configured: text !== null,
+          acceptedBaselineId,
+          instructionsPresent: false,
+          status: "invalid-configuration",
+          nextQuestion: null,
+          issues: [],
+          nextAction:
+            "Use the bootstrap skill to repair the existing project specification without discarding known details.",
+        };
+        let raw: unknown;
+        try {
+          raw = text?.trim() ? JSON.parse(text) : {};
+        } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
+          // Do not echo JSON parse errors: they can include credential values.
+          inspection.issues = ["Project specification is not valid JSON."];
+        }
+        if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+          const parsed = ProjectSchema.safeParse(raw);
+          if (!parsed.success) {
+            // Group by fixed schema keys, without persisting user values or unknown keys.
+            const fields = Object.keys(ProjectSchema.shape).filter((field) =>
+              parsed.error.issues.some((issue) => issue.path[0] === field)
+            );
+            inspection.issues = fields.map((field) =>
+              `Complete or correct ${field}.`
+            );
+            if (parsed.error.issues.some((issue) => issue.path.length === 0)) {
+              inspection.issues.push(
+                "Remove unsupported project specification fields.",
+              );
+            }
+          }
+          const purpose = (raw as Record<string, unknown>).purpose;
+          const hasPurpose = typeof purpose === "string" &&
+            purpose.trim().length > 0 &&
+            !purpose.includes("__BOOTSTRAP_DRAFT__");
+          inspection.status = hasPurpose || acceptedBaselineId
+            ? "needs-configuration"
+            : "needs-details";
+          inspection.nextAction = acceptedBaselineId
+            ? "Use the bootstrap skill to resume from the accepted baseline and reconcile project files; do not restart discovery."
+            : "Use the bootstrap skill to reuse known details, ask only missing project questions, and draft the control plane.";
+          if (!hasPurpose && !acceptedBaselineId) {
+            inspection.nextQuestion =
+              "What would you like to build, and who is it for?";
+          }
+          if (parsed.success) {
+            const instructions = parsed.data.documents.filter((doc) =>
+              doc.role === "instructions"
+            );
+            inspection.instructionsPresent = instructions.length > 0 &&
+              (await Promise.all(
+                instructions.map((doc) => readOptional(doc.path)),
+              ))
+                .every((content) => content !== null);
+            if (!inspection.instructionsPresent) {
+              inspection.issues.push(
+                "Complete the native instruction document inventory and restore missing files.",
+              );
+            }
+            if (hasPurpose && inspection.instructionsPresent) {
+              inspection.status = "ready-for-check";
+              inspection.nextAction =
+                "Run check and review the candidate baseline; inspection does not validate or accept it.";
+            }
+          }
+        } else if (inspection.issues.length === 0) {
+          inspection.issues = ["Project specification must be a JSON object."];
+        }
+        return emit(context, "inspection", "inspection", inspection);
       },
     },
     check: {

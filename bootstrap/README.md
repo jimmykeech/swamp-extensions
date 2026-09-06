@@ -10,10 +10,33 @@ that verification evidence matches the work item's baseline and source digest.
 It reuses `@swamp/software-factory`; it does not implement another factory
 engine.
 
-## Install and use
+## Start with your agent
+
+Select the `bootstrap` skill using your agent's native skill mechanism, or ask:
+
+> Use the bootstrap skill to configure this project for agentic coding with
+> Swamp factories.
+
+If the project idea and audience are not already known, the agent starts with:
+
+> What would you like to build, and who is it for?
+
+It asks one missing question at a time and waits for your answer. It reuses
+details from the conversation, README, existing documents, and saved draft. It
+then establishes the first useful version and material constraints. "Not sure"
+is a valid answer; the agent offers recommendations and states its assumptions.
+
+The agent saves progress in `docs/bootstrap/brief.md` and resumes from it after
+an interruption. It writes the project documents and JSON for you. Discovery
+comes before setup requirements and strict configuration checks. A draft is not
+approval: the final architecture baseline still needs your explicit acceptance.
+An existing accepted baseline or work item resumes without repeating onboarding.
+
+## Native Swamp setup
 
 Use the project's selected agent and its native Swamp skills. Check the
-installed CLI before initializing a new repository:
+installed CLI before initializing a new repository. These commands are setup
+reference; the agent can collect the project brief before running them:
 
 ```sh
 swamp help repo init
@@ -41,12 +64,6 @@ extension without reinitializing. If another integration is needed, inspect
 when adding it. Do not use forced reinitialization. Verify that the active agent
 can load both bundled skills from its native skill location.
 
-Then select the `bootstrap` skill using your agent's native skill mechanism, or
-ask:
-
-> Use the bootstrap skill to configure this project for agentic coding with
-> Swamp factories.
-
 The bundled skill conducts the design conversation, uses the personal working
 profile, and guides validation and explicit baseline acceptance. It installs and
 configures suitable existing runner extensions for the project's real checks. It
@@ -69,7 +86,7 @@ the agent remain responsible for native integration and skill discovery.
 ## Lifecycle
 
 ```text
-Project: inspect → design → check → validate preview → accept → readiness
+Project: discover or resume → design → check → validate preview → accept → readiness
 Item:    intake → create/validate/bind definitions → activate → start or resume
 Factory: import context → plan → review → implement → verify → review → ready
                                       ↑ bounded rework ───────────────┘
@@ -88,7 +105,7 @@ Create one controller with
 
 | Method                                    | Purpose                                                                         |
 | ----------------------------------------- | ------------------------------------------------------------------------------- |
-| `inspect`                                 | Inspect bootstrap entry points without editing project files.                   |
+| `inspect`                                 | Report discovery or configuration status without editing project files.         |
 | `check`                                   | Capture and structurally validate a complete candidate baseline.                |
 | `preview`                                 | Return ID-free candidate definitions for concrete CLI validation.               |
 | `accept`                                  | Record explicit acceptance of the unchanged baseline digest.                    |
@@ -114,6 +131,20 @@ validation, acceptance, and binding steps. Use
 [bootstrap-factory](.agents/skills/bootstrap-factory/SKILL.md) to drive an
 accepted item. The controller does not allocate IDs: the agent creates
 definitions through the normal Swamp CLI and preserves the IDs it returns.
+
+`inspect` returns `status`, `nextQuestion`, `issues`, and `acceptedBaselineId`
+for the active agent:
+
+| Status                  | Meaning                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| `needs-details`         | Start or resume project discovery. Use known conversation or draft details before asking `nextQuestion`. |
+| `needs-configuration`   | Continue the project configuration, or recover it from the recorded accepted baseline.                   |
+| `ready-for-check`       | Proceed to strict `check`; this is not validation or acceptance.                                         |
+| `invalid-configuration` | Repair the reported configuration issue while preserving the draft and acceptance history.               |
+
+The CLI only returns this signal. It does not launch an agent or display an
+interactive questionnaire. The native agent conducts the conversation. Accepted
+baselines suppress the new-project question when local configuration is missing.
 
 ## Readiness, safety, and scope
 

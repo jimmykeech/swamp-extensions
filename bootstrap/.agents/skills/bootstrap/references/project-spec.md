@@ -5,6 +5,30 @@ another project-relative JSON file. It hashes this file, the listed documents,
 and generated factory/verification templates into one baseline. Keep secrets out
 of these files.
 
+## Discovery draft
+
+The user does not need to supply this JSON to start. The native agent first
+collects the missing project details in conversation and writes them to
+`docs/bootstrap/brief.md`. Keep the purpose, users, first useful version,
+material constraints, explicit assumptions, open questions, and next step there
+as they become known. Read and preserve the draft on resume. Do not store
+secrets or label the brief as an accepted baseline.
+
+The brief is a working note, not controller configuration. Keep it outside
+`documents`; transfer its confirmed details into the required documents and
+project JSON. The agent writes the JSON when enough details are available.
+Missing details are a discovery step, not a reason to demand a hand-written
+configuration or run strict `check` prematurely. Existing accepted baselines and
+work items resume from their stored context instead of repeating discovery.
+
+`inspect` offers a non-interactive routing signal: `needs-details`,
+`needs-configuration`, `ready-for-check`, or `invalid-configuration`, with
+`nextQuestion`, `issues`, and `acceptedBaselineId`. An accepted baseline takes
+precedence over new-project discovery when local configuration is absent or
+incomplete. The active agent uses conversation and draft context before asking
+the generic question. `ready-for-check` is not evidence of baseline validity,
+acceptance, native agent readiness, or passing project tests.
+
 ## Required control plane
 
 Include at least one document for each role. Paths must be unique. Do not list
@@ -103,7 +127,7 @@ project-specific content before `check` succeeds.
   ],
   "skills": ["project-architecture"],
   "dependencies": [
-    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.3" },
+    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.4" },
     { "name": "@swamp/software-factory", "version": "2026.06.24.1" },
     { "name": "@swamp/deno-runner", "version": "2026.08.23.1" }
   ],

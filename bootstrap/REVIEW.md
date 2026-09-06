@@ -3,6 +3,53 @@
 Reviewed against the pinned `@swamp/software-factory@2026.06.24.1` source. This
 is an implementation review, not an authenticated approval system.
 
+## Guided onboarding update — 2026.09.06.4
+
+Mechanical review completed before controller tests:
+
+- Schema-write conformance: PASS. Inspection writes all eight declared fields
+  through the existing schema-validated emitter.
+- Truncation honesty: PASS. Diagnostics group issues by fixed schema fields;
+  they do not return partial file contents. File limits still throw.
+- Instance consistency: PASS. Only the existing `inspection` instance changes.
+- Field coverage: PASS. Status, question, issues, accepted baseline pointer,
+  presence flags, specification path, and next action have producing paths.
+
+Dimensional review:
+
+- Credentials and secrets: PASS. Neither raw JSON errors nor unknown field
+  names/values enter inspection output. Draft guidance excludes secrets.
+- Logging: PASS. Entry and completion logs omit project content.
+- Error handling: PASS. Only missing files and JSON syntax failures become
+  expected discovery/configuration states. Unsafe paths and other I/O failures
+  still fail before persistence.
+- Testing completeness: PASS. The focused regression covers first-run states,
+  unchanged files, strict-check rejection, safe reads, and accepted-state
+  resume. Runtime results and behavioral-test limits are recorded in
+  VALIDATION.md.
+- Idempotency and resilience: PASS. Inspection writes no project file,
+  candidate, registry, or acceptance. The skill resumes a draft or accepted
+  baseline without repeating known questions.
+- API contracts: Not applicable. No HTTP integration was added.
+- Resource management: PASS. Existing bounded reads close file handles.
+- Published surface: PASS. Native-agent examples and draft instructions contain
+  no credentials or infrastructure identifiers.
+- Schema strictness: PASS. Inspection has explicit routing fields. Project and
+  acceptance schemas remain strict; tolerant discovery does not weaken `check`.
+- Lifetime and garbage collection: PASS. Existing resource policies are
+  unchanged.
+- CRUD completeness: Not applicable. No external CRUD resource is managed.
+- Pre-flight checks: PASS. Snapshot, approval, binding, and verification guards
+  are unchanged. `ready-for-check` explicitly does not mean accepted or valid.
+- Instance names: PASS. Inspection does not allocate factories or work items.
+- Data access: PASS. Accepted-state detection reads the registry through Swamp's
+  resource API. The active agent retrieves accepted context through Swamp data.
+- Version upgrades: PASS. The `.4` no-op preserves the unchanged `specPath`
+  arguments and does not migrate accepted baselines.
+
+Independent review found no blocking issue. The native agent conducts the
+interview; the CLI returns routing data and never launches an interactive agent.
+
 ## Agent-neutral update — 2026.09.06.3
 
 - Mechanical schema/write conformance, truncation, instance consistency, and

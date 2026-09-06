@@ -131,6 +131,108 @@ const approval = {
   validation: "local-template-validation-record",
 };
 
+Deno.test("first-run inspection guides discovery without accepting drafts or hiding file errors", async () => {
+  await withProject(async ({ root, context, data, saveSpec }) => {
+    const specPath = path.join(root, context.globalArgs.specPath);
+    const cases = [
+      { text: null, status: "needs-details" },
+      { text: "", status: "needs-details" },
+      { text: " \n ", status: "needs-details" },
+      { text: "{}", status: "needs-details" },
+      {
+        text: '{"title":"Reading list","purpose":" "}',
+        status: "needs-details",
+      },
+      { text: '{"purpose":"__BOOTSTRAP_DRAFT__"}', status: "needs-details" },
+      {
+        text: '{"purpose":"Track books for my family."}',
+        status: "needs-configuration",
+      },
+      {
+        text: '{"token":"example-secret-value",',
+        status: "invalid-configuration",
+      },
+      { text: "null", status: "invalid-configuration" },
+      { text: "[]", status: "invalid-configuration" },
+      { text: '"project"', status: "invalid-configuration" },
+      {
+        text:
+          '{"purpose":"Track books","example-secret-key":"example-secret-value"}',
+        status: "needs-configuration",
+      },
+    ];
+    for (const entry of cases) {
+      data.clear();
+      if (entry.text === null) await Deno.remove(specPath);
+      else await Deno.writeTextFile(specPath, entry.text);
+      await model.methods.inspect.execute({}, context);
+      const inspection = data.get("inspection")!;
+      assert.equal(inspection.status, entry.status);
+      assert.equal(inspection.configured, entry.text !== null);
+      assert.equal(inspection.acceptedBaselineId, null);
+      assert.equal(inspection.instructionsPresent, false);
+      assert.equal(
+        inspection.nextQuestion,
+        entry.status === "needs-details"
+          ? "What would you like to build, and who is it for?"
+          : null,
+      );
+      assert.ok(
+        Array.isArray(inspection.issues) && inspection.issues.length > 0,
+      );
+      assert.equal(
+        JSON.stringify(inspection).includes("example-secret"),
+        false,
+      );
+      await assert.rejects(() => model.methods.check.execute({}, context));
+      assert.deepEqual([...data.keys()], ["inspection"]);
+      if (entry.text === null) {
+        await assert.rejects(() => Deno.stat(specPath), Deno.errors.NotFound);
+      } else assert.equal(await Deno.readTextFile(specPath), entry.text);
+    }
+
+    await saveSpec();
+    await model.methods.inspect.execute({}, context);
+    assert.equal(data.get("inspection")?.status, "ready-for-check");
+    assert.equal(data.get("inspection")?.nextQuestion, null);
+    assert.deepEqual(data.get("inspection")?.issues, []);
+    assert.equal(data.has("candidate"), false);
+    await Deno.remove(path.join(root, "AGENTS.md"));
+    await model.methods.inspect.execute({}, context);
+    assert.equal(data.get("inspection")?.status, "needs-configuration");
+    assert.equal(data.get("inspection")?.nextQuestion, null);
+
+    data.clear();
+    const originalPath = context.globalArgs.specPath;
+    for (
+      const unsafePath of ["../project.json", ".env", ".swamp/project.json"]
+    ) {
+      context.globalArgs.specPath = unsafePath;
+      await assert.rejects(
+        () => model.methods.inspect.execute({}, context),
+        /path|component/,
+      );
+      assert.equal(data.size, 0);
+    }
+    context.globalArgs.specPath = originalPath;
+    await Deno.writeTextFile(specPath, "x".repeat(1024 * 1024 + 1));
+    await assert.rejects(
+      () => model.methods.inspect.execute({}, context),
+      /byte limit/,
+    );
+    assert.equal(data.size, 0);
+    await saveSpec();
+    const link = path.join(root, "project-link.json");
+    await Deno.symlink(specPath, link);
+    context.globalArgs.specPath = "project-link.json";
+    await assert.rejects(
+      () => model.methods.inspect.execute({}, context),
+      /symlink/,
+    );
+    assert.equal(data.size, 0);
+  });
+});
+
 Deno.test("native agent layouts survive inspect, acceptance, intake, and pinned context", async () => {
   for (
     const agent of [
@@ -218,6 +320,16 @@ Deno.test("native agent layouts survive inspect, acceptance, intake, and pinned 
       await model.methods.inspect.execute({}, context);
       assert.equal(data.get("inspection")?.configured, false);
       assert.equal(data.get("inspection")?.instructionsPresent, false);
+      assert.equal(
+        data.get("inspection")?.acceptedBaselineId,
+        candidate.baselineId,
+      );
+      assert.equal(data.get("inspection")?.status, "needs-configuration");
+      assert.equal(data.get("inspection")?.nextQuestion, null);
+      assert.deepEqual(
+        data.get(`baseline-${candidate.baselineId}`)?.spec,
+        candidate.spec,
+      );
     }, agent);
   }
 });

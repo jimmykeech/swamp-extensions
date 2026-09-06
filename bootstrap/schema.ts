@@ -2,7 +2,7 @@
 import { z } from "npm:zod@4";
 
 /** Extension release tested against the official factory engine. */
-export const VERSION = "2026.09.06.3";
+export const VERSION = "2026.09.06.4";
 /** Official engine version supported by this release. */
 export const ENGINE_VERSION = "2026.06.24.1";
 /** Content-addressed identifier. */
