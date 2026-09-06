@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@jamesakeech/bootstrap"
-version: "2026.09.06.4"
+version: "2026.09.06.5"
 description: >-
   Bootstrap a project for any Swamp-integrated agent with a reviewed architecture control plane and the
   official Swamp software-factory engine. Captures content-addressed accepted

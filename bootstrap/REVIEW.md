@@ -3,6 +3,43 @@
 Reviewed against the pinned `@swamp/software-factory@2026.06.24.1` source. This
 is an implementation review, not an authenticated approval system.
 
+## Architecture-choice update — 2026.09.06.5
+
+Mechanical review: PASS for schema/write conformance, field coverage, instance
+consistency, and truncation honesty. Controller methods, resource schemas,
+emitters, limits, and factory templates are unchanged. The production TypeScript
+diff is the version pin and a configuration-preserving no-op upgrade.
+
+- Credentials and secrets: PASS. Guidance retains secret-free project files; no
+  new credential collection or output is introduced.
+- Logging: PASS. Existing method logs are unchanged.
+- Error handling: PASS. Existing safe reads and validation failures are
+  unchanged.
+- Testing completeness: PASS by inspection. The focused regression checks a
+  non-DDD choice and its review skill through snapshot, acceptance, intake, and
+  each interactive stage. Behavioral exercise results are in VALIDATION.md.
+- Idempotency and resilience: PASS. Existing choices and accepted baselines are
+  reused; DDD is an offered default, not an automatic migration.
+- API contracts: Not applicable. No external API integration is added.
+- Resource management: PASS. No runtime resource allocation changes.
+- Published surface: PASS. Examples use project-neutral identities. DDD-specific
+  patterns are not imposed on a custom philosophy or small domain.
+- Schema strictness: PASS. Philosophy uses existing `decisions` and inventoried
+  ADR/skill files, not an unsupported configuration key.
+- Lifetime and garbage collection: PASS. Existing policies are unchanged.
+- CRUD completeness: Not applicable. No external CRUD resource is managed.
+- Pre-flight checks: PASS. Baseline approval and execution guards are unchanged.
+- Instance names: PASS. Both project skills use normal inventory names; no new
+  factory, workflow, or controller instance rules are introduced.
+- Data access: PASS. The driver reads pinned project skills after context
+  import; it loads the bundled driver separately. Review-only rules apply to
+  review work.
+- Version upgrades: PASS. The `.5` upgrade preserves `specPath` and does not
+  rewrite existing baselines or add required fields.
+
+Review corrected the driver wording to distinguish pinned project skills from
+the separately loaded bundled driver and to respect context-import ordering.
+
 ## Guided onboarding update — 2026.09.06.4
 
 Mechanical review completed before controller tests:

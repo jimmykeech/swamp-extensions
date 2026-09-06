@@ -418,6 +418,67 @@ Deno.test("accepted baseline is exact, intake is idempotent, and existing contex
   });
 });
 
+Deno.test("a custom architecture and its review skill are pinned and passed to interactive factory stages", async () => {
+  await withProject(async ({ root, spec, context, data, saveSpec }) => {
+    const choice =
+      "Use a functional core and imperative shell, not DDD aggregates.";
+    const skillName = "project-architecture-review";
+    const skillPath = `.agents/skills/${skillName}/SKILL.md`;
+    const review =
+      `---\nname: ${skillName}\ndescription: Review functional-core boundaries in plans and code.\n---\nDuring review, check pure calculations and isolate I/O in adapters. Report boundary violations without editing source.\n`;
+    await Deno.mkdir(path.dirname(path.join(root, skillPath)), {
+      recursive: true,
+    });
+    await Deno.writeTextFile(path.join(root, skillPath), review);
+    spec.decisions = [choice];
+    spec.skills.push(skillName);
+    spec.documents.push({ role: "review-guidance", path: skillPath });
+    await saveSpec();
+    await model.methods.check.execute({}, context);
+    const candidate = BaselineSchema.parse(data.get("candidate"));
+    assert.deepEqual(candidate.spec.decisions, [choice]);
+    assert.equal(
+      candidate.documents.find((doc) => doc.path === skillPath)?.content,
+      review,
+    );
+    await model.methods.accept.execute({
+      baselineId: candidate.baselineId,
+      ...approval,
+    }, context);
+    await model.methods.intake.execute({
+      reference: "CUSTOM-1",
+      provider: "local",
+      workspace: ".",
+    }, context);
+    const item = RegistrySchema.parse(data.get("registry")).items[0];
+    const assembly = AssemblySchema.parse(
+      data.get(`assembly-${item.workItem}`),
+    );
+    const stages = assembly.factoryArguments.stages as {
+      work?: { mode: string; skills?: string[] };
+    }[];
+    const interactive = stages.filter((stage) =>
+      stage.work?.mode === "interactive"
+    );
+    assert.ok(interactive.length > 0);
+    for (const stage of interactive) {
+      assert.deepEqual(stage.work?.skills, [
+        "bootstrap-factory",
+        ...spec.skills,
+      ]);
+    }
+    await model.methods.context.execute({ workItem: item.workItem }, context);
+    assert.deepEqual(
+      data.get(`context-${item.workItem}`)?.spec,
+      candidate.spec,
+    );
+    assert.deepEqual(
+      data.get(`context-${item.workItem}`)?.documents,
+      candidate.documents,
+    );
+  });
+});
+
 Deno.test("configuration rejects invalid roots before acceptance and strips merged global arguments", async () => {
   await withProject(async ({ spec, context, data, saveSpec }) => {
     const merged = { specPath: context.globalArgs.specPath };
