@@ -1,6 +1,6 @@
 # Validation
 
-## 2026.09.06.3 — agent-neutral update (unpublished)
+## 2026.09.06.3 — published agent-neutral update
 
 - Focused controller/report tests: 6 passed, 0 failed. The new regression
   exercises Codex, Claude, Pi with two skill roots, a custom agent layout, and
@@ -17,6 +17,14 @@
   dry-run passed. The archive retains agent-neutral `extension/skills/` paths.
 - Independent code review found no blocking issues. It confirmed unchanged
   snapshot safety and version-upgrade behavior.
+- Registry publication: public stable `@jamesakeech/bootstrap@2026.09.06.3`.
+  Publication checks earned all 12 client-checkable quality points and produced
+  no dry-run warnings.
+- Fresh registry installation: passed in a separate Claude-only repository
+  without source links or `AGENTS.md`. Both bundled skills were installed under
+  `.claude/skills` and matched the reviewed source. Both workflows were
+  discovered. Model creation selected `.3`; `inspect` and the readiness report
+  correctly reported an unconfigured project with no accepted baseline.
 
 Focused command, run from `bootstrap/` with the installed Deno runtime:
 
@@ -24,12 +32,13 @@ Focused command, run from `bootstrap/` with the installed Deno runtime:
 deno test --allow-read --allow-write bootstrap_test.ts readiness_test.ts
 ```
 
-The CLI fixture used the source-loaded model, not a registry installation of
-`.3`. Native skill discovery is the agent/Swamp integration's responsibility. No
-live Claude, Pi, or other coding-agent session was launched. The installed Swamp
-CLI's tool list predates native Pi support; the Pi layouts were tested at the
-controller boundary. The full two-item lifecycle was not rerun because factory
-execution and verification templates did not change.
+The pre-publication controller checks used the source-loaded model. The later
+installation check used the published `.3` package. Native skill discovery is
+the agent/Swamp integration's responsibility. No live Claude, Pi, or other
+coding-agent session was launched. The installed Swamp CLI's tool list predates
+native Pi support; the Pi layouts were tested at the controller boundary. The
+full two-item lifecycle was not rerun because factory execution and verification
+templates did not change.
 
 ## 2026.09.06.2 — published release validation
 
