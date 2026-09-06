@@ -6,6 +6,7 @@
  *
  * @module
  */
+import { type Factory, FactorySchema } from "./schema.ts";
 
 /** Values bound when a project template becomes one work-item factory. */
 export interface FactoryTemplateOptions {
@@ -21,6 +22,8 @@ export interface FactoryTemplateOptions {
   contextPaths: string[];
   /** Additional project skills that each interactive stage must load. */
   skills: string[];
+  /** Additive, validated project-specific stages and review checkpoints. */
+  factory?: Factory;
   /** Maximum entries into each rework stage before the engine stops the run. */
   maxCycles: number;
   /** Whether routine plan acceptance needs an explicit human approval. */
@@ -30,6 +33,11 @@ export interface FactoryTemplateOptions {
 }
 
 type Definition = Record<string, unknown>;
+interface StageDefinition extends Definition {
+  id: string;
+  work?: Definition;
+  transitions?: { name: string; to: string; gates: Definition[] }[];
+}
 
 function digestSchema(): Definition {
   return { type: "string", pattern: "^[a-f0-9]{64}$" };
@@ -87,10 +95,17 @@ export function createFactoryArguments(
   if (!Number.isInteger(options.maxCycles) || options.maxCycles < 1) {
     throw new Error("Factory maxCycles must be a positive integer.");
   }
+  const factory = options.factory === undefined
+    ? undefined
+    : FactorySchema.parse(options.factory);
   const skills = [...new Set(["bootstrap-factory", ...options.skills])];
-  const work = (inject: string[], task: string): Definition => ({
+  const work = (
+    inject: string[],
+    task: string,
+    extraSkills: string[] = [],
+  ): Definition => ({
     mode: "interactive",
-    skills,
+    skills: [...new Set([...skills, ...extraSkills])],
     context: { inject },
     systemPrompt: [
       "Follow the bootstrap-factory driver skill. Record dispatch before work.",
@@ -118,7 +133,10 @@ export function createFactoryArguments(
     },
   };
 
-  return {
+  const definition: {
+    stages: StageDefinition[];
+    globalTransitions: Definition[];
+  } = {
     stages: [
       {
         id: "import-context",
@@ -439,4 +457,87 @@ export function createFactoryArguments(
       gates: [approval("abort-confirmation")],
     }],
   };
+
+  for (const custom of factory?.stages ?? []) {
+    const stage = definition.stages.find((stage) => stage.id === custom.stage)!;
+    stage.work!.skills = [...new Set([...skills, ...(custom.skills ?? [])])];
+    if (custom.instructions) {
+      stage.work!.systemPrompt +=
+        `\nProject-specific guidance (supplements the stage contract):\n${custom.instructions}`;
+    }
+  }
+
+  for (const anchor of ["plan-review", "code-review"] as const) {
+    const reviews = (factory?.reviews ?? []).filter((review) =>
+      review.after === anchor
+    );
+    if (reviews.length === 0) continue;
+    const plan = anchor === "plan-review";
+    const subject = plan ? "plan" : "change-summary";
+    const reworkStage = plan ? "planning" : "implementing";
+    const destination = plan ? "implementing" : "ready";
+    const policyApproval = plan
+      ? options.requirePlanApproval
+      : options.requireDeliveryApproval;
+    const approvalId = plan ? "plan-approval" : "delivery-approval";
+    const anchorIndex = definition.stages.findIndex((stage) =>
+      stage.id === anchor
+    );
+    const accept = definition.stages[anchorIndex].transitions!.find((
+      transition,
+    ) => transition.name === "accept")!;
+    accept.to = reviews[0].id;
+    // Routine sign-off covers the entire review chain, not only its first pass.
+    accept.gates = accept.gates.filter((gate) =>
+      gate.type !== "human-approval"
+    );
+    const additions: StageDefinition[] = reviews.map((review, index) => ({
+      id: review.id,
+      description: `Project-specific ${
+        plan ? "plan" : "code"
+      } review: ${review.id}.`,
+      ...bounded,
+      work: work(
+        plan
+          ? ["project-context", "plan"]
+          : ["project-context", "plan", "change-summary"],
+        [
+          "Perform a separate review pass using the pinned project guidance.",
+          `Record ${review.id} findings against the current ${subject}.`,
+          "Do not edit source or the review subject. Report required changes as blocking findings.",
+          `Unresolved critical or high findings require rework through ${reworkStage}.`,
+          "Do not mark unresolved findings resolved to pass a gate. Ready does not authorize external delivery.",
+          `Project-specific review guidance:\n${review.instructions}`,
+        ].join("\n"),
+        review.skills,
+      ),
+      artifacts: [{ name: review.id, kind: "findings", reviews: subject }],
+      transitions: [{
+        name: "accept",
+        to: reviews[index + 1]?.id ?? destination,
+        gates: [
+          fresh(review.id),
+          clear(review.id),
+          ...(!plan ? [sameVerifiedChange] : []),
+          ...(review.requireApproval
+            ? [approval(`review-${review.id}-approval`)]
+            : []),
+          ...(index === reviews.length - 1 && policyApproval
+            ? [approval(approvalId)]
+            : []),
+        ],
+      }, {
+        name: "rework",
+        to: reworkStage,
+        gates: [fresh(review.id), needsRework(review.id)],
+      }],
+    }));
+    definition.stages.splice(anchorIndex + 1, 0, ...additions);
+    const rework = definition.stages.find((stage) => stage.id === reworkStage)!;
+    rework.work!.systemPrompt +=
+      `\nOn re-entry, retrieve any recorded findings from these additional reviews and address their causes: ${
+        reviews.map((review) => review.id).join(", ")
+      }. They need not exist on the first entry.`;
+  }
+  return definition;
 }

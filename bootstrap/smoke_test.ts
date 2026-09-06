@@ -149,7 +149,7 @@ async function prepareToVerify(item: Item): Promise<string> {
   await record("project-context", context);
   await advance("begin");
   await dispatch();
-  await record("plan", {
+  const plan = {
     summary: "Implement pure addition",
     steps: [{
       description: "Implement sum and a focused test",
@@ -157,10 +157,59 @@ async function prepareToVerify(item: Item): Promise<string> {
     }],
     testingStrategy:
       "Run the accepted Deno test through the dedicated workflow",
-  });
+  };
+  await record("plan", plan);
   await advance("submit");
   await dispatch();
   await record("plan-review", { findings: [] });
+  await advance("accept");
+  await dispatch();
+  if (item.reference === "local-a") {
+    await record("risk-review", {
+      findings: [{
+        id: "risk-1",
+        severity: "high",
+        description: "The plan must explicitly cover negative operands.",
+      }],
+    });
+    await method(
+      item.factoryName,
+      "advance",
+      { ...key, transition: "accept" },
+      true,
+    );
+    await advance("rework");
+    await dispatch();
+    await record("plan", {
+      ...plan,
+      testingStrategy:
+        "Verify positive and negative operands with the dedicated Deno workflow.",
+    });
+    await advance("submit");
+    await dispatch();
+    await record("plan-review", { findings: [] });
+    await advance("accept");
+    await dispatch();
+    // The old custom findings cannot satisfy the new review cycle.
+    await method(
+      item.factoryName,
+      "advance",
+      { ...key, transition: "accept" },
+      true,
+    );
+  }
+  await record("risk-review", { findings: [] });
+  await method(
+    item.factoryName,
+    "advance",
+    { ...key, transition: "accept" },
+    true,
+  );
+  await method(item.factoryName, "approve", {
+    ...key,
+    gateId: "plan-approval",
+    actor: "integration-test",
+  });
   await advance("accept");
   await dispatch();
   await write(
@@ -187,7 +236,7 @@ async function prepareToVerify(item: Item): Promise<string> {
 
 Deno.test({
   name:
-    "real Swamp engine: accepted baseline, two isolated factories, provenance, and resume",
+    "real Swamp engine: custom reviews, rework, approval, isolated factories, and provenance",
   ignore: !smokeRepo,
   sanitizeOps: false,
   sanitizeResources: false,
@@ -203,6 +252,30 @@ Deno.test({
     const match = guide.match(/```json\n([\s\S]*?)\n```/);
     assert.ok(match);
     const spec = ProjectSchema.parse(JSON.parse(match[1]));
+    spec.factory = {
+      base: "bootstrap-default",
+      stages: [{
+        stage: "planning",
+        instructions: "Plan focused pure-function tests.",
+      }],
+      reviews: [
+        {
+          id: "risk-review",
+          after: "plan-review",
+          instructions: "Review arithmetic edge cases in the plan.",
+        },
+        {
+          id: "boundary-review",
+          after: "code-review",
+          instructions:
+            "Review pure-function boundaries without editing source.",
+          skills: ["project-architecture-review"],
+          requireApproval: true,
+        },
+      ],
+    };
+    spec.policy.requirePlanApproval = true;
+    spec.policy.requireDeliveryApproval = true;
     // Fixtures are representative project-owned documents, not passing test substitutes.
     for (const doc of spec.documents) {
       if (doc.path === "AGENTS.md") continue;
@@ -298,6 +371,36 @@ Deno.test({
         ...key,
         name: "code-review",
         payload: { findings: [] },
+      });
+      await method(item.factoryName, "advance", {
+        ...key,
+        transition: "accept",
+      });
+      const status = output(await method(item.factoryName, "status", key));
+      assert.ok(JSON.stringify(status).includes("boundary-review"));
+      await method(item.factoryName, "record_dispatch", key);
+      await method(item.factoryName, "record_artifact", {
+        ...key,
+        name: "boundary-review",
+        payload: { findings: [] },
+      });
+      await method(item.factoryName, "advance", {
+        ...key,
+        transition: "accept",
+      }, true);
+      await method(item.factoryName, "approve", {
+        ...key,
+        gateId: "review-boundary-review-approval",
+        actor: "integration-test",
+      });
+      await method(item.factoryName, "advance", {
+        ...key,
+        transition: "accept",
+      }, true);
+      await method(item.factoryName, "approve", {
+        ...key,
+        gateId: "delivery-approval",
+        actor: "integration-test",
       });
       await method(item.factoryName, "advance", {
         ...key,

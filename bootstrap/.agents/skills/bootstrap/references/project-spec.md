@@ -16,8 +16,11 @@ on resume. Do not store secrets or label the brief as an accepted baseline.
 
 The brief is a working note, not controller configuration. Keep it outside
 `documents`; transfer its confirmed details into the required documents and
-project JSON. The agent writes the JSON when enough details are available.
-Missing details are a discovery step, not a reason to demand a hand-written
+project JSON. The agent writes the JSON when enough details are available. After
+architecture design, follow [factory-design.md](factory-design.md) to outline
+and confirm the factory before strict checking. Save pending and confirmed
+factory choices in the brief so an interrupted interview resumes. Missing
+details are a discovery step, not a reason to demand a hand-written
 configuration or run strict `check` prematurely. Existing accepted baselines and
 work items resume from their stored context instead of repeating discovery.
 
@@ -132,15 +135,17 @@ reviewed project-specific content before `check` succeeds.
     {
       "role": "review-guidance",
       "path": ".agents/skills/project-architecture-review/SKILL.md"
-    }
+    },
+    { "role": "decision", "path": "docs/bootstrap/factory.md" }
   ],
   "decisions": [
     "Choose a functional core for this small library instead of DDD-specific modelling; keep arithmetic pure and independent of I/O.",
     "Use Deno's built-in test runner for the initial verification check."
   ],
   "skills": ["project-architecture", "project-architecture-review"],
+  "factory": { "base": "bootstrap-default" },
   "dependencies": [
-    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.5" },
+    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.6" },
     { "name": "@swamp/software-factory", "version": "2026.06.24.1" },
     { "name": "@swamp/deno-runner", "version": "2026.08.23.1" }
   ],
@@ -255,5 +260,8 @@ poll or write to a tracker.
 Routine plan and ready-stage approval gates are optional. Material decisions and
 external actions still require explicit approval. `maxCycles` is 1–5; unresolved
 critical or high findings require rework. Exhausted cycle limits need a human
-decision, not an automatic override. Stages follow the shipped template in this
-release.
+decision, not an automatic override. Optional `factory` settings customise stage
+guidance and skills and add sequential review checkpoints to the base. See
+[factory-design.md](factory-design.md) for the complete supported interface and
+its protected gates. Omission keeps the old default; it is not evidence that a
+new project's user has confirmed their factory design.

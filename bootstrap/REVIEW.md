@@ -3,6 +3,49 @@
 Reviewed against the pinned `@swamp/software-factory@2026.06.24.1` source. This
 is an implementation review, not an authenticated approval system.
 
+## Factory customization update — 2026.09.06.6
+
+Mechanical review before runtime tests: PASS for schema/write conformance, field
+coverage, instance consistency, and truncation honesty. All writes still pass
+through the schema-validated emitter. The optional nested `factory` value is
+copied with `spec` into candidate, accepted baseline, and item context. Its
+generated stages are stored in the existing template/assembly fields. Existing
+limits fail rather than return partial data; no resource names or lifetimes
+change.
+
+- Credentials and secrets: PASS. Existing snapshot secret checks cover factory
+  settings. Custom instructions reject CEL and binding placeholders.
+- Logging: PASS. No document, skill, or instruction contents enter logs.
+- Error handling: PASS. Strict schema and complete skill inventory checks
+  precede candidate persistence.
+- Testing completeness: PASS by inspection. Focused tests exercise custom review
+  chains, protected gates, scoped skills, default equivalence, exact acceptance,
+  and old-item pinning. Runtime results are in VALIDATION.md.
+- Idempotency and resilience: PASS. Optional fields have no parse defaults;
+  existing items instantiate their stored templates, not the updated generator.
+- API contracts: Not applicable to HTTP. Reviewed the pinned official factory
+  authoring contract for stage/cycle approval, fresh findings, and evidence.
+- Resource management: PASS. No new runtime handles or external allocations.
+- Published surface: PASS. Examples contain no real infrastructure or secrets.
+- Schema strictness: PASS. Unknown fields, duplicate stages/review IDs, base
+  name collisions, and executable prompt expressions are rejected.
+- Lifetime and garbage collection: PASS. Existing policies are unchanged.
+- CRUD completeness: Not applicable. No external CRUD resource is managed.
+- Pre-flight checks: PASS. Context, verification, base review, and authority
+  contracts remain protected. Added reviews retain fresh findings, blocking
+  rework, cycle limits, and code-side source/baseline matching. Routine approval
+  follows the final review in its chain.
+- Instance names: PASS. Review IDs are bounded and distinct; Swamp still
+  allocates factory/workflow IDs for each item.
+- Data access: PASS. Additional skills are inventoried without becoming
+  project-wide. The driver reads them from the pinned snapshot.
+- Version upgrades: PASS. The `.6` no-op preserves `specPath` and does not
+  migrate accepted baselines or templates.
+
+Independent read-only review found no blockers. The onboarding reference makes
+customization additive, preserves pending/confirmed choices, and distinguishes
+sequential reviews from automatic independent-agent dispatch.
+
 ## Architecture-choice update — 2026.09.06.5
 
 Mechanical review: PASS for schema/write conformance, field coverage, instance

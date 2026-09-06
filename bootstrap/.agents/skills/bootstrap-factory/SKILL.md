@@ -45,7 +45,10 @@ the baseline. Keep the original snapshot paths and contents unchanged.
    implementation, and the corresponding review criteria during plan and code
    review. Review-only instructions do not make implementation stages read-only.
    Follow the baseline's chosen philosophy; do not substitute DDD or another
-   default when it selected something else.
+   default when it selected something else. Read the current
+   `work.systemPrompt`, including its accepted project-specific instructions and
+   additional skills. They supplement, not replace, required artifacts, gates,
+   and authority rules.
 4. Perform the current work in the reserved workspace. Record declared artifacts
    or evidence using their exact schemas. Use `advance` with a satisfied
    transition. Do not skip gates or manufacture evidence to force progress.
@@ -99,6 +102,20 @@ the same findings contract. This stage is read-only for source files. Record
 required code changes as blocking findings and take `rework` through
 implementation and verification. Do not silently edit reviewed source after the
 successful test run.
+
+Additional project reviews: Use the current stage ID and declared findings
+artifact from `status`, not a hard-coded next-stage list. A review after
+`plan-review` reviews `plan`; one after `code-review` reviews `change-summary`.
+Perform the configured specialist review as a separate read-only pass. Record
+its findings under that stage's ID using the standard findings contract above.
+Use fresh findings each cycle. Blocking findings return through `planning` or
+`implementing`; on re-entry, those stages must retrieve any recorded custom
+review findings as well as base review findings. Custom findings need not exist
+on the first entry. Plan/delivery approval follows the final review in its
+chain; an extra review may also have its own approval gate. Follow the actual
+gates in `status`. Do not assume that a base review leads directly to
+implementation or `ready`, or that an extra review starts a separate agent
+automatically.
 
 Only call engine `approve` on explicit human instruction for the current gate.
 Routine approval may be disabled in the accepted policy. Material decisions and

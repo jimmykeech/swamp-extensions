@@ -1,5 +1,59 @@
 # Validation
 
+## 2026.09.06.6 — local factory customization update
+
+- Controller/template/readiness tests: 13 passed, 0 failed. Custom settings
+  reach preview, accepted snapshots, new-item assemblies, and pinned context.
+  Missing specialist skill inventory and changed approval subjects fail.
+  Existing items retain their original templates. Omitted customization and an
+  explicit unchanged base produce identical factory definitions.
+- Template regression checks custom review ordering, fresh subject-linked
+  findings, critical/high rework, cycle bounds, scoped skills, protected
+  verification, and final plan/delivery approvals. Unsupported graph fields,
+  name collisions, and executable prompt expressions are rejected.
+- Real CLI lifecycle test: 1 passed, 0 failed in approximately 3 minutes. The
+  isolated fixture uses source-loaded bootstrap `.6`, official factory engine
+  `2026.06.24.1`, and Deno runner `2026.08.23.1`. Preview and both item
+  factories passed native factory/workflow validation. A custom plan review
+  exercised blocking findings, rework, fresh re-review, and required plan
+  approval. A custom code review required both its own sign-off and final
+  delivery approval. Both dedicated workflows ran actual Deno tests and reached
+  ready through source-bound evidence. Duplicate intake, pinned context, and
+  stale baseline acceptance checks also passed. Expected method failures
+  retrieved their generated reports.
+- Both bundled skills passed `quick_validate.py`. An independent two-turn
+  onboarding exercise first outlined the project factory and waited for a
+  choice. It then saved the requested accessibility review and plan approval,
+  generated a stage-specific Claude-layout skill, and preserved pending runner
+  validation. The resulting factory/policy fragments passed the actual schemas.
+  The main agent inspected the settings, outline, brief, inventory, and skill.
+  These were controlled agent exercises, not live Claude/Pi sessions or a
+  deployed web application's accessibility validation.
+- Type checking passed for changed production code and tests. The complete
+  reference example parses, pins `.6`, and inventories the factory outline.
+- Mechanical and independent adversarial review found no blocking issue before
+  runtime tests. The final documentation clarifies that inspection cannot
+  confirm factory choices; a new project completes that conversation first.
+- Package dry-run passed with the current content-bound review and no warnings.
+  The archive includes the new factory-design reference. No Git push, PR update,
+  or registry publication was performed for this change.
+
+Commands run from `bootstrap/`, using `/Users/jimmykeech/.swamp/deno/deno` as
+the Deno executable:
+
+```sh
+deno check bootstrap.ts bootstrap_test.ts templates_test.ts
+deno test --allow-read --allow-write bootstrap_test.ts templates_test.ts readiness_test.ts
+BOOTSTRAP_SMOKE_REPO=/Users/jimmykeech/Develop/bootstrap-smoke-custom.CrDqgx \
+  deno test --allow-read --allow-write --allow-env --allow-run smoke_test.ts
+```
+
+Package check from the repository root:
+
+```sh
+swamp extension push bootstrap/manifest.yaml --dry-run --json
+```
+
 ## 2026.09.06.5 — published architecture-choice update
 
 - Focused controller/report tests: 8 passed, 0 failed. The new regression pins a
