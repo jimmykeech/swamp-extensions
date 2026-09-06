@@ -2,7 +2,7 @@
 import { z } from "npm:zod@4";
 
 /** Extension release tested against the official factory engine. */
-export const VERSION = "2026.09.06.5";
+export const VERSION = "2026.09.06.6";
 /** Official engine version supported by this release. */
 export const ENGINE_VERSION = "2026.06.24.1";
 /** Content-addressed identifier. */
@@ -10,6 +10,72 @@ export const Digest = z.string().regex(/^[a-f0-9]{64}$/);
 const Text = z.string().trim().min(1).max(2000);
 const Name = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/);
 const JsonObject = z.record(z.string(), z.unknown());
+
+// Factory prompts are literal guidance, not executable CEL or binding slots.
+const FactoryInstructions = Text.refine(
+  (text) => !text.includes("${{") && !/__[A-Z][A-Z0-9_]*__/.test(text),
+  "Factory instructions must be plain text without CEL or bootstrap placeholders.",
+);
+const FactorySkills = z.array(Name).min(1).max(16);
+
+/** Supported customizations of bootstrap's protected base lifecycle. */
+export const FactorySchema = z.strictObject({
+  base: z.literal("bootstrap-default"),
+  stages: z.array(
+    z.strictObject({
+      stage: z.enum(["planning", "plan-review", "implementing", "code-review"]),
+      instructions: FactoryInstructions.optional(),
+      skills: FactorySkills.optional(),
+    }).refine(
+      (stage) => stage.instructions !== undefined || stage.skills !== undefined,
+      "A stage customization needs instructions or skills.",
+    ),
+  ).max(4).optional(),
+  reviews: z.array(z.strictObject({
+    id: z.string().max(48).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/),
+    after: z.enum(["plan-review", "code-review"]),
+    instructions: FactoryInstructions,
+    skills: FactorySkills.optional(),
+    requireApproval: z.boolean().optional(),
+  })).max(8).optional(),
+}).superRefine((factory, context) => {
+  const stages = factory.stages ?? [];
+  if (new Set(stages.map((stage) => stage.stage)).size !== stages.length) {
+    context.addIssue({
+      code: "custom",
+      path: ["stages"],
+      message: "Customize each base stage only once.",
+    });
+  }
+  const reserved = new Set([
+    "import-context",
+    "planning",
+    "plan-review",
+    "implementing",
+    "verification",
+    "code-review",
+    "ready",
+    "aborted",
+    "project-context",
+    "plan",
+    "change-summary",
+    "verification-run",
+    "verification-seal",
+  ]);
+  for (const [index, review] of (factory.reviews ?? []).entries()) {
+    if (reserved.has(review.id)) {
+      context.addIssue({
+        code: "custom",
+        path: ["reviews", index, "id"],
+        message:
+          "Review IDs must be unique and must not reuse a base stage, artifact, or evidence name.",
+      });
+    }
+    reserved.add(review.id);
+  }
+});
+/** Optional project-owned factory choices; omitted fields retain base behavior. */
+export type Factory = z.infer<typeof FactorySchema>;
 
 /** A real check executed through an existing Swamp model type. */
 export const CheckSchema = z.strictObject({
@@ -49,6 +115,7 @@ export const ProjectSchema = z.strictObject({
   })).min(7).max(64),
   decisions: z.array(Text).min(1).max(64),
   skills: z.array(Name).min(1).max(16),
+  factory: FactorySchema.optional(),
   dependencies: z.array(
     z.strictObject({
       name: z.string().regex(/^@[a-z0-9_-]+\/[a-z0-9_/-]+$/),

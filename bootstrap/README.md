@@ -59,6 +59,35 @@ See the
 selection and skill generation. These are native-agent actions; the CLI does not
 conduct the interview or generate skill text.
 
+## Customise your software factory
+
+After architecture design, the agent outlines the proposed factory using
+bootstrap's default lifecycle on the official Swamp engine:
+
+```text
+import context → plan → plan review → implement → verify → code review → ready
+```
+
+It explains the stages, outputs, project skills, real checks, rework routes, and
+approval points. It then asks what you want to change and waits for your answer.
+You can customise stage instructions and additional skills, add specialist plan
+or code reviews, select checks, and set human approval points and rework limits.
+For example, add a security review after code review with its own project skill
+and explicit sign-off. Added reviews are sequential passes, not automatically
+separate agents.
+
+The agent saves the agreed outline in `docs/bootstrap/factory.md` and writes the
+configuration for you. Confirmed choices survive interrupted onboarding. The
+generated factory is previewed and validated before you accept the complete
+baseline. Every new work item receives that accepted template; existing items
+keep their original template.
+
+Customization is additive. Required base stages, fresh review findings, real
+verification, and source/baseline checks remain protected. Arbitrary stage
+removal, reordering, and executable stage definitions are not supported. See the
+[factory design reference](.agents/skills/bootstrap/references/factory-design.md)
+for configuration fields and examples.
+
 ## Native Swamp setup
 
 Use the project's selected agent and its native Swamp skills. Check the
@@ -113,7 +142,7 @@ the agent remain responsible for native integration and skill discovery.
 ## Lifecycle
 
 ```text
-Project: discover or resume → design → check → validate preview → accept → readiness
+Project: discover/resume → design → customise factory → check → validate preview → accept → readiness
 Item:    intake → create/validate/bind definitions → activate → start or resume
 Factory: import context → plan → review → implement → verify → review → ready
                                       ↑ bounded rework ───────────────┘
@@ -172,6 +201,8 @@ for the active agent:
 The CLI only returns this signal. It does not launch an agent or display an
 interactive questionnaire. The native agent conducts the conversation. Accepted
 baselines suppress the new-project question when local configuration is missing.
+For a new baseline, finish the architecture and factory choices before `check`,
+even if inspection reports that the configuration fields are ready.
 
 ## Readiness, safety, and scope
 
@@ -185,8 +216,8 @@ baselines suppress the new-project question when local configuration is missing.
   outside configured `sourcePaths` are not covered by the digest.
 - Work-item identity uses project, provider, scope, and reference. A retry
   resumes the original baseline and binding. New baselines apply to new items.
-  Automatic migration, arbitrary stage editing, and history reset are not part
-  of this release.
+  Automatic migration, unrestricted graph editing, and history reset are not
+  part of this release.
 - Only one controller is supported per repository. Workspaces must already exist
   inside that repository and contain the pinned control-plane files. Concurrent
   items require non-overlapping workspaces. Bootstrap does not provision

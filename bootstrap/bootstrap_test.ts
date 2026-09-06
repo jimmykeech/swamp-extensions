@@ -131,6 +131,127 @@ const approval = {
   validation: "local-template-validation-record",
 };
 
+Deno.test("custom factory choices are inventoried, previewed, and pinned without migrating existing items", async () => {
+  await withProject(async ({ root, spec, context, data, saveSpec }) => {
+    await model.methods.check.execute({}, context);
+    const original = BaselineSchema.parse(data.get("candidate"));
+    assert.equal(Object.hasOwn(original.spec, "factory"), false);
+    await model.methods.accept.execute({
+      baselineId: original.baselineId,
+      ...approval,
+    }, context);
+    await model.methods.intake.execute({
+      reference: "OLD",
+      provider: "local",
+      workspace: ".",
+    }, context);
+    const old = RegistrySchema.parse(data.get("registry")).items[0];
+    const oldAssembly = structuredClone(data.get(`assembly-${old.workItem}`));
+    const skill = "project-security-review";
+    const skillPath = `.claude/skills/${skill}/SKILL.md`;
+    spec.factory = {
+      base: "bootstrap-default",
+      stages: [{
+        stage: "planning",
+        instructions: "Plan account isolation tests.",
+      }],
+      reviews: [{
+        id: "security-review",
+        after: "code-review",
+        instructions: "Review access control.",
+        skills: [skill],
+        requireApproval: true,
+      }],
+    };
+    await saveSpec();
+    await assert.rejects(
+      () => model.methods.check.execute({}, context),
+      /Include the selected skill project-security-review/,
+    );
+    assert.deepEqual(data.get("candidate"), original);
+    await Deno.mkdir(path.dirname(path.join(root, skillPath)), {
+      recursive: true,
+    });
+    await Deno.writeTextFile(
+      path.join(root, skillPath),
+      "---\nname: project-security-review\ndescription: Review access control.\n---\nCheck account isolation without editing source.\n",
+    );
+    spec.documents.push({ role: "review-guidance", path: skillPath });
+    await saveSpec();
+    await model.methods.check.execute({}, context);
+    const candidate = BaselineSchema.parse(data.get("candidate"));
+    assert.notEqual(candidate.baselineId, original.baselineId);
+    assert.deepEqual(candidate.spec.factory, spec.factory);
+    assert.ok(
+      candidate.documents.some((document) => document.path === skillPath),
+    );
+    await model.methods.preview.execute({ workspace: "." }, context);
+    const preview = AssemblySchema.parse(data.get("preview"));
+    const reviews = preview.factoryArguments.stages as {
+      id: string;
+      work?: { skills?: string[] };
+    }[];
+    assert.ok(
+      reviews.find((stage) => stage.id === "security-review")?.work?.skills
+        ?.includes(skill),
+    );
+    assert.equal(
+      reviews.find((stage) => stage.id === "planning")?.work?.skills?.includes(
+        skill,
+      ),
+      false,
+    );
+    spec.factory.reviews![0].instructions =
+      "Review account isolation and unsafe input.";
+    await saveSpec();
+    await assert.rejects(
+      () =>
+        model.methods.accept.execute({
+          baselineId: candidate.baselineId,
+          ...approval,
+        }, context),
+      /Candidate changed/,
+    );
+    spec.factory = candidate.spec.factory;
+    await saveSpec();
+    await model.methods.accept.execute({
+      baselineId: candidate.baselineId,
+      ...approval,
+    }, context);
+    await model.methods.intake.execute({
+      reference: "NEW",
+      provider: "local",
+      workspace: ".",
+    }, context);
+    const current = RegistrySchema.parse(data.get("registry")).items[1];
+    const assembly = AssemblySchema.parse(
+      data.get(`assembly-${current.workItem}`),
+    );
+    assert.ok(
+      (assembly.factoryArguments.stages as { id: string }[]).some((stage) =>
+        stage.id === "security-review"
+      ),
+    );
+    assert.equal(current.baselineId, candidate.baselineId);
+    await model.methods.context.execute(
+      { workItem: current.workItem },
+      context,
+    );
+    assert.deepEqual(
+      data.get(`context-${current.workItem}`)?.spec,
+      candidate.spec,
+    );
+    await model.methods.intake.execute({
+      reference: "OLD",
+      provider: "local",
+      workspace: ".",
+    }, context);
+    assert.deepEqual(data.get(`assembly-${old.workItem}`), oldAssembly);
+    await model.methods.context.execute({ workItem: old.workItem }, context);
+    assert.deepEqual(data.get(`context-${old.workItem}`)?.spec, original.spec);
+  });
+});
+
 Deno.test("first-run inspection guides discovery without accepting drafts or hiding file errors", async () => {
   await withProject(async ({ root, context, data, saveSpec }) => {
     const specPath = path.join(root, context.globalArgs.specPath);

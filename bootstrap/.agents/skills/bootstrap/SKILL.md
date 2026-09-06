@@ -15,7 +15,9 @@ Load the installed `swamp` skill for CLI operations. Read
 baseline. Read [personal-policy.md](references/personal-policy.md) when drafting
 the project's working agreements. Read
 [architecture.md](references/architecture.md) when selecting a design philosophy
-or creating its project skills. Current user instructions take precedence over
+or creating its project skills. After design, read
+[factory-design.md](references/factory-design.md) to outline and customise the
+software factory with the user. Current user instructions take precedence over
 this profile.
 
 ## Start or resume the conversation
@@ -59,9 +61,12 @@ Controller `inspect` supplies `status`, `nextQuestion`, `issues`, and
 known context. `needs-details` starts or resumes discovery;
 `needs-configuration` continues drafting or recovers the accepted configuration;
 `invalid-configuration` needs the reported configuration issue repaired without
-discarding the draft or acceptance history. `ready-for-check` means proceed to
-strict `check`, not that validation or acceptance has passed. The CLI returns
-data; it does not launch an agent or conduct this conversation itself.
+discarding the draft or acceptance history. `ready-for-check` means the listed
+fields are structurally ready. For a new baseline, finish the architecture and
+factory-design conversations before strict `check`; inspection cannot establish
+the user's choices. It does not mean validation or acceptance has passed. The
+CLI returns data; it does not launch an agent or conduct this conversation
+itself.
 
 ## Choose the architecture philosophy
 
@@ -123,12 +128,15 @@ framework, deployment topology, or unnecessary DDD patterns.
    project-local copy for the accepted inventory; do not snapshot external paths
    or symlinks. Confirm that the active agent can load required skills or read
    their accepted contents. Do not accept unfinished draft markers.
-5. Search for existing runner and tracker extensions before selecting
-   integrations. Inspect their installed model schemas. Record exact extension
-   versions and real check behavior. The `command` field describes a check; it
-   does not execute it. Configure an existing runner model method. Do not add
-   reusable `command/shell` wrappers or successful placeholder checks. Default
-   to local work items when the tracker choice is unresolved.
+5. Once the design and architecture skills are drafted, outline the proposed
+   factory using the default lifecycle as a base. Follow
+   [factory-design.md](references/factory-design.md): show stages, artifacts,
+   skills, checks, rework routes, and approvals; ask what the user wants to
+   change and wait. Resolve the real runner/tracker integrations through
+   existing extensions. Persist choices in the brief, write the agreed factory
+   outline and supported project JSON settings, and inventory any stage-specific
+   skills. Confirm the resulting design before proceeding. Do not silently
+   retain the base or configure unsupported changes through prompts.
 6. Run controller `check`, then `preview`. Retrieve `candidate` and `preview`
    with `swamp data get project-bootstrap candidate --json` and
    `swamp data get project-bootstrap preview --json`.
@@ -147,6 +155,8 @@ framework, deployment topology, or unnecessary DDD patterns.
    the selected native integration and its instruction and skill locations.
    Check that the chosen philosophy, ADR, conventions, and generated skills
    agree, and that the preview lists both project skills on interactive stages.
+   Use factory `describe` to compare the actual graph with the confirmed factory
+   outline, including custom reviews, stage skills, rework, and final approvals.
    Bootstrap's structural checks do not verify agent enrollment or native skill
    discovery. Write the successful results to
    `docs/bootstrap/validation-<baselineId>.md`. Keep this transcript outside
@@ -225,6 +235,7 @@ definitions or retrying. Never call factory `reset` as recovery.
 Edit authoritative project documents deliberately. Check and validate a new
 complete candidate before accepting it. New work items use the new baseline.
 Existing items remain pinned and must retain matching control-plane files in
-their own workspace. This release has no automatic baseline migration or
-arbitrary stage-template editor. Do not rewrite old snapshots, bindings, or run
+their own workspace. Use the supported factory customization fields, then
+regenerate and validate the preview. There is no automatic baseline migration or
+unrestricted graph editor. Do not rewrite old snapshots, bindings, or run
 history.

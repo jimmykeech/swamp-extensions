@@ -191,7 +191,12 @@ async function capture(context: Context): Promise<Baseline> {
       "Document paths must be unique and must not repeat the project specification.",
     );
   }
-  for (const skill of spec.skills) {
+  const selectedSkills = new Set([
+    ...spec.skills,
+    ...(spec.factory?.stages ?? []).flatMap((stage) => stage.skills ?? []),
+    ...(spec.factory?.reviews ?? []).flatMap((review) => review.skills ?? []),
+  ]);
+  for (const skill of selectedSkills) {
     if (
       !spec.documents.some((doc) =>
         doc.path === `${skill}/SKILL.md` ||
@@ -290,6 +295,7 @@ async function capture(context: Context): Promise<Baseline> {
     workflowName: "__VERIFY_WORKFLOW__",
     contextPaths: paths,
     skills: spec.skills,
+    factory: spec.factory,
     maxCycles: spec.policy.maxCycles,
     requirePlanApproval: spec.policy.requirePlanApproval,
     requireDeliveryApproval: spec.policy.requireDeliveryApproval,
@@ -453,7 +459,7 @@ async function verifyInputs(
 /** Bootstrap controller. Keep exactly one instance per project repository. */
 export const model = {
   type: "@jamesakeech/bootstrap",
-  version: "2026.09.06.5",
+  version: "2026.09.06.6",
   upgrades: [{
     toVersion: "2026.09.06.2",
     description:
@@ -473,6 +479,11 @@ export const model = {
     toVersion: "2026.09.06.5",
     description:
       "Offer architecture philosophy selection and matching skills; preserve arguments and accepted baselines.",
+    upgradeAttributes: (old: Record<string, unknown>) => old,
+  }, {
+    toVersion: "2026.09.06.6",
+    description:
+      "Add optional project factory customization; preserve specPath arguments and accepted templates.",
     upgradeAttributes: (old: Record<string, unknown>) => old,
   }],
   reports: ["@jamesakeech/bootstrap/readiness"],
