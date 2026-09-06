@@ -1,6 +1,6 @@
 # Validation
 
-## 2026.09.06.6 — local factory customization update
+## 2026.09.06.6 — published factory customization update
 
 - Controller/template/readiness tests: 13 passed, 0 failed. Custom settings
   reach preview, accepted snapshots, new-item assemblies, and pinned context.
@@ -35,8 +35,18 @@
   runtime tests. The final documentation clarifies that inspection cannot
   confirm factory choices; a new project completes that conversation first.
 - Package dry-run passed with the current content-bound review and no warnings.
-  The archive includes the new factory-design reference. No Git push, PR update,
-  or registry publication was performed for this change.
+  The archive includes the new factory-design reference. Release formatting,
+  lint, and dependency audit passed. Quality earned all 12 client-checkable
+  points.
+- Committed and pushed on `bootstrap-extension`; PR #19 contains the factory
+  customization update. Published public stable
+  `@jamesakeech/bootstrap@2026.09.06.6`; the registry confirms it as latest.
+- Fresh registry-only installation passed in a separate Claude repository. Both
+  bundled skills and the factory-design and project-spec references match the
+  reviewed source exactly. Model creation selected `.6`; `inspect` returned
+  `needs-details` and the expected first question without creating project
+  configuration. This verifies packaging and model loading, not a live native
+  agent interview.
 
 Commands run from `bootstrap/`, using `/Users/jimmykeech/.swamp/deno/deno` as
 the Deno executable:
