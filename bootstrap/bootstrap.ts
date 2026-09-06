@@ -53,7 +53,9 @@ const ReadinessSchema = z.strictObject({
 const InspectionSchema = z.strictObject({
   specPath: Text,
   configured: z.boolean(),
-  instructionsPresent: z.boolean(),
+  instructionsPresent: z.boolean().describe(
+    "All instructions documents listed in the project specification exist; false without a configured inventory",
+  ),
   nextAction: Text,
 });
 const DigestSchema = z.strictObject({
@@ -172,11 +174,6 @@ async function capture(context: Context): Promise<Baseline> {
       throw new Error(`Missing control-plane document role: ${role}`);
     }
   }
-  if (
-    !spec.documents.some((doc) =>
-      doc.role === "instructions" && doc.path === "AGENTS.md"
-    )
-  ) throw new Error("The instructions document must be AGENTS.md.");
   const paths = [specPath, ...spec.documents.map((doc) => doc.path)];
   if (new Set(paths).size !== paths.length) {
     throw new Error(
@@ -184,9 +181,14 @@ async function capture(context: Context): Promise<Baseline> {
     );
   }
   for (const skill of spec.skills) {
-    if (!paths.includes(`.agents/skills/${skill}/SKILL.md`)) {
+    if (
+      !spec.documents.some((doc) =>
+        doc.path === `${skill}/SKILL.md` ||
+        doc.path.endsWith(`/${skill}/SKILL.md`)
+      )
+    ) {
       throw new Error(
-        `Include the selected skill .agents/skills/${skill}/SKILL.md in documents.`,
+        `Include the selected skill ${skill}/SKILL.md from its project-local skill directory in documents.`,
       );
     }
   }
@@ -440,11 +442,16 @@ async function verifyInputs(
 /** Bootstrap controller. Keep exactly one instance per project repository. */
 export const model = {
   type: "@jamesakeech/bootstrap",
-  version: "2026.09.06.2",
+  version: "2026.09.06.3",
   upgrades: [{
     toVersion: "2026.09.06.2",
     description:
       "Enable readiness reporting; preserve the unchanged configuration schema.",
+    upgradeAttributes: (old: Record<string, unknown>) => old,
+  }, {
+    toVersion: "2026.09.06.3",
+    description:
+      "Support native Swamp agent layouts; preserve existing specPath arguments and accepted baselines.",
     upgradeAttributes: (old: Record<string, unknown>) => old,
   }],
   reports: ["@jamesakeech/bootstrap/readiness"],
@@ -482,10 +489,18 @@ export const model = {
           }
         };
         const configured = await exists(context.globalArgs.specPath);
+        const instructions = configured
+          ? ProjectSchema.parse(JSON.parse(
+            await readProjectText(context.repoDir, context.globalArgs.specPath),
+          )).documents.filter((doc) => doc.role === "instructions")
+          : [];
+        const instructionsPresent = instructions.length > 0 &&
+          (await Promise.all(instructions.map((doc) => exists(doc.path))))
+            .every(Boolean);
         return emit(context, "inspection", "inspection", {
           specPath: context.globalArgs.specPath,
           configured,
-          instructionsPresent: await exists("AGENTS.md"),
+          instructionsPresent,
           nextAction: configured
             ? "Run check and review the candidate baseline."
             : "Use the bootstrap skill to agree the project design and create the control-plane files.",

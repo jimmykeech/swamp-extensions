@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: Bootstrap a Codex project with an accepted architecture control plane and isolated Swamp software factories. Use for project bootstrap, baseline acceptance, or work-item intake with @jamesakeech/bootstrap; not general Swamp onboarding.
+description: Bootstrap a project for any Swamp-integrated agent with an accepted architecture control plane and isolated software factories. Use for project bootstrap, baseline acceptance, or work-item intake with @jamesakeech/bootstrap; not general Swamp onboarding.
 ---
 
 # Bootstrap a project
@@ -21,9 +21,17 @@ this profile.
 1. Inspect the repository, working tree, instructions, and existing build
    commands. Preserve unrelated work. Reuse existing documents where they meet
    the need.
-2. If `.swamp.yaml` is absent, initialize with `swamp repo init --tool codex`.
-   Do not force reinitialization. Inspect existing controller models before
-   creating `project-bootstrap` with
+2. Select the project's default agent from the user's choice or existing Swamp
+   setup. Inspect `swamp help repo init` and the repository's enrolled tools. If
+   `.swamp.yaml` is absent, initialize with `swamp repo init --tool <tool>`
+   using the selected built-in or configured custom tool ID. Do not substitute
+   Codex or force reinitialization. For an existing repository, inspect
+   `swamp help repo upgrade` before adding an integration. Preserve the full
+   existing enrollment list and its order. Follow the installed CLI and current
+   Swamp documentation for native setup; support varies by Swamp version. Verify
+   the active agent can load `bootstrap` and `bootstrap-factory` through its
+   native skill mechanism. Inspect existing controller models before creating
+   `project-bootstrap` with
    `swamp model create @jamesakeech/bootstrap project-bootstrap`. Its default
    `globalArguments.specPath` is `docs/bootstrap/project.json`.
 3. Establish purpose, users, scope, constraints, external systems, quality
@@ -32,13 +40,18 @@ this profile.
    alternatives where needed. Do not impose a language, framework, DDD, or
    distributed deployment by default.
 4. Draft the seven document roles and the structured project specification
-   described in the reference. Put custom instructions outside the Swamp-managed
-   `AGENTS.md` section. Use `apply_patch` for project-owned edits. Write
-   concrete architecture boundaries, a justified decision record,
+   described in the reference. Set `agentTool` to the selected default agent's
+   tool ID. Inventory the actual project-relative instruction and skill files
+   used by the native integration. Preserve Swamp-managed sections in every
+   selected instruction file. Use the active agent's normal file-editing tools.
+   Write concrete architecture boundaries, a justified decision record,
    language-specific examples, and actionable review guidance. Include
    referenced skill files and supporting references in the document inventory
-   when they are needed by later factory stages. Do not accept unfinished draft
-   markers.
+   when they are needed by later factory stages. If a needed skill is installed
+   globally, create a reviewed project-local copy for the accepted inventory; do
+   not snapshot external paths or symlinks. Confirm that the active agent can
+   load required skills or read their accepted contents. Do not accept
+   unfinished draft markers.
 5. Search for existing runner and tracker extensions before selecting
    integrations. Inspect their installed model schemas. Record exact extension
    versions and real check behavior. The `command` field describes a check; it
@@ -59,11 +72,13 @@ this profile.
    definitions.
 8. Validate the concrete preview workflow, and run the preview factory's
    `validate` method. Check each installed dependency version, runner input
-   schema, check command, workspace binding, and required output. Write the
-   successful results to `docs/bootstrap/validation-<baselineId>.md`. Keep this
-   transcript outside `spec.documents` to avoid a baseline hash cycle. Factory
-   and workflow validation establish configuration readiness, not passing
-   application tests.
+   schema, check command, workspace binding, and required output. Also verify
+   the selected native integration and its instruction and skill locations.
+   Bootstrap's structural checks do not verify agent enrollment or native skill
+   discovery. Write the successful results to
+   `docs/bootstrap/validation-<baselineId>.md`. Keep this transcript outside
+   `spec.documents` to avoid a baseline hash cycle. Factory and workflow
+   validation establish configuration readiness, not passing application tests.
 9. Present the full baseline: documents, design decisions, runner commands,
    skills, policy, dependency versions, and templates. Obtain explicit
    acceptance of its exact `baselineId`. Run controller `accept` with that

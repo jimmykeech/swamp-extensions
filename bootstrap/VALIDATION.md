@@ -1,4 +1,37 @@
-# Validation — 2026.09.06.2
+# Validation
+
+## 2026.09.06.3 — agent-neutral update (unpublished)
+
+- Focused controller/report tests: 6 passed, 0 failed. The new regression
+  exercises Codex, Claude, Pi with two skill roots, a custom agent layout, and
+  multiple instruction files. It covers inspection, missing required files and
+  skills, acceptance, intake, and pinned context.
+- Real CLI check: passed in a fresh `swamp repo init --tool claude` fixture.
+  Source-loaded controller `inspect` and `check` accepted `CLAUDE.md` and
+  `.claude/skills/project-architecture/SKILL.md` without `AGENTS.md`.
+- Backward compatibility: the source-loaded controller at `.3` retrieved the
+  original Codex work-item context, unchanged baseline ID, and original `.1`
+  dependency pin from the earlier lifecycle fixture. No baseline was migrated.
+- Both updated skills passed skill-creator validation. The documented project
+  JSON example remained parseable. Extension format/lint and local package
+  dry-run passed. The archive retains agent-neutral `extension/skills/` paths.
+- Independent code review found no blocking issues. It confirmed unchanged
+  snapshot safety and version-upgrade behavior.
+
+Focused command, run from `bootstrap/` with the installed Deno runtime:
+
+```sh
+deno test --allow-read --allow-write bootstrap_test.ts readiness_test.ts
+```
+
+The CLI fixture used the source-loaded model, not a registry installation of
+`.3`. Native skill discovery is the agent/Swamp integration's responsibility. No
+live Claude, Pi, or other coding-agent session was launched. The installed Swamp
+CLI's tool list predates native Pi support; the Pi layouts were tested at the
+controller boundary. The full two-item lifecycle was not rerun because factory
+execution and verification templates did not change.
+
+## 2026.09.06.2 — published release validation
 
 Platform: Swamp `20260828.231706.0-sha.ca29674e`, macOS arm64. Factory engine:
 `@swamp/software-factory@2026.06.24.1`. Verification runner:

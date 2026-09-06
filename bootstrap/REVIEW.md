@@ -3,6 +3,34 @@
 Reviewed against the pinned `@swamp/software-factory@2026.06.24.1` source. This
 is an implementation review, not an authenticated approval system.
 
+## Agent-neutral update — 2026.09.06.3
+
+- Mechanical schema/write conformance, truncation, instance consistency, and
+  field coverage: PASS. Inspection retains its declared boolean fields and now
+  derives instruction presence from the configured inventory.
+- Credentials/secrets, logging, error handling, and resource management: PASS.
+  Instruction and skill files still pass through bounded, project-local reads.
+  Existing path, symlink, and secret rejection remain in place.
+- Idempotency, schema strictness, lifetime/GC, pre-flight guards, instance
+  names, and data access: PASS. No execution ownership or baseline mutation was
+  added.
+- Published surface: PASS. Agent-neutral examples use native setup discovery.
+  Native enrollment remains Swamp's responsibility rather than a duplicate
+  hard-coded integration registry inside bootstrap.
+- Version upgrades: PASS. The `.3` no-op retains `specPath`. Widening
+  `agentTool` preserves existing Codex configurations. Real CLI retrieval
+  confirmed an older baseline and its original dependency pin remain readable.
+- Testing: PASS. Six focused controller/report tests passed, including six
+  native-layout cases. A source-loaded Claude fixture passed `inspect` and
+  `check` without `AGENTS.md`. Both updated skill validators passed.
+- API contracts and CRUD completeness: Not applicable. No HTTP integration or
+  external CRUD operation was added.
+
+Independent review found no blocking issue. Native agent sessions and Pi
+installation were not exercised; see VALIDATION.md for the exact boundaries.
+
+The sections below record the original implementation and `.2` corrections.
+
 ## Mechanical checks
 
 - Schema-write conformance: PASS. Every output passes its declared Zod schema

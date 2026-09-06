@@ -1,8 +1,8 @@
 manifestVersion: 1
 name: "@jamesakeech/bootstrap"
-version: "2026.09.06.2"
+version: "2026.09.06.3"
 description: >-
-  Bootstrap a Codex project with a reviewed architecture control plane and the
+  Bootstrap a project for any Swamp-integrated agent with a reviewed architecture control plane and the
   official Swamp software-factory engine. Captures content-addressed accepted
   baselines, preserves existing project files, reserves one factory and a unique
   verification workflow per work item, and checks workspace isolation and
@@ -33,4 +33,4 @@ labels:
   - control-plane
   - software-factory
   - agentic-coding
-  - codex
+  - agent-neutral

@@ -9,6 +9,12 @@ Load the installed `swamp` skill for CLI operations. Use the factory's `status`
 output as the source of its current stage, resolved work inputs, gates, and next
 actions. Do not rebuild the factory state machine in another orchestrator.
 
+Any agent with native Swamp integration can drive these stages. The baseline's
+`agentTool` records its chosen default; it does not bind the runtime driver. Use
+the active agent's native skill mechanism and file-editing tools. Ensure it can
+read the pinned instruction and skill contents even when another agent created
+the baseline. Keep the original snapshot paths and contents unchanged.
+
 ## Entry conditions
 
 - Get the bootstrap controller name, `workItem`, `factoryName`, `workflowName`,

@@ -10,21 +10,40 @@ of these files.
 Include at least one document for each role. Paths must be unique. Do not list
 the project JSON itself; the controller adds it to the snapshot automatically.
 
-| Role                 | Suggested path                                 | Required purpose                                                          |
-| -------------------- | ---------------------------------------------- | ------------------------------------------------------------------------- |
-| `instructions`       | `AGENTS.md`                                    | Project working agreements outside the Swamp-managed section.             |
-| `conventions`        | `docs/conventions.md`                          | Existing toolchain, commands, layout, naming, and targeted validation.    |
-| `system-context`     | `docs/architecture/L1-system-context.md`       | Users, scope, external systems, and trust boundaries.                     |
-| `containers`         | `docs/architecture/L2-containers.md`           | Runtime components, responsibilities, dependencies, and deployment shape. |
-| `decision`           | `docs/adr/0001-project-foundation.md`          | Decision, alternatives, reasons, and consequences.                        |
-| `architecture-skill` | `.agents/skills/project-architecture/SKILL.md` | Enforceable boundaries and small examples in the selected language.       |
-| `review-guidance`    | `docs/review-guidance.md`                      | Project-specific plan and code review criteria.                           |
+| Role                 | Suggested path                                           | Required purpose                                                          |
+| -------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `instructions`       | Native instruction file, e.g. `CLAUDE.md` or `AGENTS.md` | Project working agreements outside Swamp-managed sections.                |
+| `conventions`        | `docs/conventions.md`                                    | Existing toolchain, commands, layout, naming, and targeted validation.    |
+| `system-context`     | `docs/architecture/L1-system-context.md`                 | Users, scope, external systems, and trust boundaries.                     |
+| `containers`         | `docs/architecture/L2-containers.md`                     | Runtime components, responsibilities, dependencies, and deployment shape. |
+| `decision`           | `docs/adr/0001-project-foundation.md`                    | Decision, alternatives, reasons, and consequences.                        |
+| `architecture-skill` | `<native-skills-root>/project-architecture/SKILL.md`     | Enforceable boundaries and small examples in the selected language.       |
+| `review-guidance`    | `docs/review-guidance.md`                                | Project-specific plan and code review criteria.                           |
 
-Every entry in `skills` must identify a real `.agents/skills/<name>/SKILL.md`
-listed in `documents`. Include supporting skill references when the work depends
-on them; use their applicable role. The bundled `bootstrap-factory` skill is
-loaded separately by generated stages. Do not put generic upstream skills in the
-project list unless their files are deliberately part of the accepted snapshot.
+Use the instruction files and skill root created or configured by the project's
+native Swamp integration. Instruction files may have other names or be nested
+inside the repository. Include every instruction file needed by later factory
+stages with the `instructions` role. Preserve their Swamp-managed sections.
+`inspect` checks this listed instruction inventory; without an inventory it does
+not report instructions as present.
+
+Every entry in `skills` must identify a real file ending in `/<name>/SKILL.md`
+listed in `documents`. Its root need not be `.agents/skills`. Include supporting
+skill references when the work depends on them; use their applicable role. The
+bundled `bootstrap-factory` skill is loaded separately by generated stages. Do
+not put generic upstream skills in the project list unless their files are
+deliberately part of the accepted snapshot. Global or external skills need
+reviewed repository-local copies if their contents must be pinned; bootstrap
+never reads outside the repository or follows skill symlinks.
+
+`agentTool` is the lowercase tool ID for the baseline's chosen default agent,
+such as `claude`, `pi`, `codex`, or a configured custom tool. `none` is not an
+agent integration. This field is metadata, not a runtime agent restriction or a
+Swamp integration registry. The active factory driver can use another integrated
+agent while respecting the same accepted context. Verify tool enrollment,
+instruction loading, and skill availability with the installed Swamp version and
+the agent. See Swamp's
+[repository configuration](https://swamp-club.com/manual/reference/repository-configuration#tools).
 
 After validating a candidate, store the transcript at
 `docs/bootstrap/validation-<baselineId>.md`. After acceptance, write
@@ -49,10 +68,12 @@ inside its snapshotted arguments is not supported by this release.
 
 ## Complete Deno example
 
-This example configures a small arithmetic module. Replace its product purpose,
-decisions, and documents with the project's real design. The seven referenced
-files must exist and contain reviewed project-specific content before `check`
-succeeds.
+This example configures a small arithmetic module with Codex as the selected
+default agent. Codex and these paths are examples, not requirements. Replace
+`agentTool` and the instruction and skill paths with the project's actual native
+setup. Replace its product purpose, decisions, and documents with the project's
+real design. The seven referenced files must exist and contain reviewed
+project-specific content before `check` succeeds.
 
 ```json
 {
@@ -82,7 +103,7 @@ succeeds.
   ],
   "skills": ["project-architecture"],
   "dependencies": [
-    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.2" },
+    { "name": "@jamesakeech/bootstrap", "version": "2026.09.06.3" },
     { "name": "@swamp/software-factory", "version": "2026.06.24.1" },
     { "name": "@swamp/deno-runner", "version": "2026.08.23.1" }
   ],
