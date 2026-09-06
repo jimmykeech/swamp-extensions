@@ -1,5 +1,49 @@
 # Validation
 
+## 2026.09.06.4 — local guided-onboarding update
+
+- Focused controller/report tests: 7 passed, 0 failed. The new regression covers
+  absent, blank, partial, draft, malformed, and non-object specifications. It
+  checks first-question routing, no leaked raw diagnostics, unchanged project
+  files, strict-check rejection, missing instructions, and unsafe/oversized/
+  symlinked file rejection. Existing native-layout cases also verify accepted
+  baselines suppress discovery when the project specification is missing.
+- Fresh Swamp CLI fixture: `swamp repo init --tool claude`, source registration
+  for models/reports, and model creation selected `.4`. `inspect` succeeded with
+  `configured: false`, `acceptedBaselineId: null`, `status: needs-details`, and
+  the expected first question. No project JSON was created. Native `CLAUDE.md`
+  was present; `AGENTS.md` was absent.
+- Independent skill exercise: an empty project received the first question; a
+  README-backed project was asked only about remaining stack constraints; a
+  saved Python project brief resumed its open hosting question. These were
+  read-only simulated sessions, not live Claude or Pi sessions. Actual draft
+  file persistence across a restarted native-agent session remains unverified.
+- Bootstrap skill structural validation, changed-file formatting, and the
+  complete reference JSON parsing passed. Independent adversarial review found
+  no blocking issue before the controller tests ran.
+- Local package build:
+  `swamp extension push bootstrap/manifest.yaml --dry-run
+  --json` passed with
+  a current content-bound review and no warnings. The archive includes both
+  skills, two workflows, one controller, and one report.
+- Not pushed or published. The published release remains `.3`. Factory execution
+  templates did not change, so the full two-item lifecycle was not rerun.
+
+Focused command, run from `bootstrap/` with the installed Deno runtime:
+
+```sh
+deno test --allow-read --allow-write bootstrap_test.ts readiness_test.ts
+```
+
+Real first-run commands used the isolated repository
+`/Users/jimmykeech/Develop/bootstrap-onboarding.VBtIoB`:
+
+```sh
+swamp model create @jamesakeech/bootstrap onboarding-bootstrap --json
+swamp model method run onboarding-bootstrap inspect --json
+swamp data get onboarding-bootstrap inspection --json
+```
+
 ## 2026.09.06.3 — published agent-neutral update
 
 - Focused controller/report tests: 6 passed, 0 failed. The new regression

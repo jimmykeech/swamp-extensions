@@ -16,11 +16,55 @@ baseline. Read [personal-policy.md](references/personal-policy.md) when drafting
 the project's working agreements. Current user instructions take precedence over
 this profile.
 
+## Start or resume the conversation
+
+Start with project discovery, not setup requirements or a configuration error.
+Use the current conversation, repository instructions, README, existing design
+documents, and `docs/bootstrap/brief.md` before asking for details. If Swamp and
+a controller already exist, inspect the controller and retrieve its registry
+through Swamp data. An accepted baseline or existing work-item reservation means
+resume the relevant baseline or intake path; do not restart onboarding. Missing
+local files need recovery from the accepted snapshot, not a new project brief.
+
+For a project without accepted configuration:
+
+1. If the project idea and audience are both unknown, ask exactly: **What would
+   you like to build, and who is it for?** Ask only the missing part if either
+   detail is already known. Wait for the user's answer before asking another
+   question or designing the project.
+2. Ask one missing question at a time. Establish purpose and users, then the
+   first useful version, then constraints that materially affect design. Skip
+   answers already supplied. Do not present a questionnaire or ask the user to
+   write JSON. After each question, wait for the answer.
+3. Accept "not sure". Offer a short recommendation and explain its trade-off.
+   Continue with explicit low-risk assumptions where appropriate. Do not invent
+   approval or silently settle a material design decision.
+4. Persist confirmed details, assumptions, unresolved questions, and the next
+   step in `docs/bootstrap/brief.md` as the conversation progresses. Mark it as
+   a draft, not an accepted baseline. Preserve existing content on resume. Do
+   not store secrets. Keep the working brief outside `spec.documents`; the agent
+   transfers confirmed details into the required control-plane documents.
+
+Summarize the brief once there is enough context to draft a useful design. Then
+continue with native setup and project configuration below. The agent writes the
+documents and structured JSON from the conversation. Acknowledging the brief
+does not accept an architecture baseline or authorize external actions.
+
+Controller `inspect` supplies `status`, `nextQuestion`, `issues`, and
+`acceptedBaselineId`. Use these as routing signals, not a script that ignores
+known context. `needs-details` starts or resumes discovery;
+`needs-configuration` continues drafting or recovers the accepted configuration;
+`invalid-configuration` needs the reported configuration issue repaired without
+discarding the draft or acceptance history. `ready-for-check` means proceed to
+strict `check`, not that validation or acceptance has passed. The CLI returns
+data; it does not launch an agent or conduct this conversation itself.
+
 ## Project bootstrap
 
-1. Inspect the repository, working tree, instructions, and existing build
-   commands. Preserve unrelated work. Reuse existing documents where they meet
-   the need.
+1. Continue from the discovered brief or existing accepted project. Inspect the
+   working tree, instructions, and existing build commands. Preserve unrelated
+   work. Reuse existing documents where they meet the need. Do not run strict
+   `check` against an empty or unfinished project specification.
 2. Select the project's default agent from the user's choice or existing Swamp
    setup. Inspect `swamp help repo init` and the repository's enrolled tools. If
    `.swamp.yaml` is absent, initialize with `swamp repo init --tool <tool>`
@@ -34,24 +78,24 @@ this profile.
    `project-bootstrap` with
    `swamp model create @jamesakeech/bootstrap project-bootstrap`. Its default
    `globalArguments.specPath` is `docs/bootstrap/project.json`.
-3. Establish purpose, users, scope, constraints, external systems, quality
-   goals, and the first useful implementation slice. Ask only unresolved
-   questions that materially affect the design. Explain architectural
+3. Use the discovered purpose, users, first useful version, and material
+   constraints to design the project. Resolve remaining questions about scope,
+   external systems, or quality goals one at a time. Explain architectural
    alternatives where needed. Do not impose a language, framework, DDD, or
    distributed deployment by default.
-4. Draft the seven document roles and the structured project specification
-   described in the reference. Set `agentTool` to the selected default agent's
-   tool ID. Inventory the actual project-relative instruction and skill files
-   used by the native integration. Preserve Swamp-managed sections in every
-   selected instruction file. Use the active agent's normal file-editing tools.
-   Write concrete architecture boundaries, a justified decision record,
-   language-specific examples, and actionable review guidance. Include
-   referenced skill files and supporting references in the document inventory
-   when they are needed by later factory stages. If a needed skill is installed
-   globally, create a reviewed project-local copy for the accepted inventory; do
-   not snapshot external paths or symlinks. Confirm that the active agent can
-   load required skills or read their accepted contents. Do not accept
-   unfinished draft markers.
+4. Write the seven document roles and structured project specification from the
+   brief using the reference. Do not require the user to supply hand-written
+   JSON. Set `agentTool` to the selected default agent's tool ID. Inventory the
+   actual project-relative instruction and skill files used by the native
+   integration. Preserve Swamp-managed sections in every selected instruction
+   file. Use the active agent's normal file-editing tools. Write concrete
+   architecture boundaries, a justified decision record, language-specific
+   examples, and actionable review guidance. Include referenced skill files and
+   supporting references in the document inventory when they are needed by later
+   factory stages. If a needed skill is installed globally, create a reviewed
+   project-local copy for the accepted inventory; do not snapshot external paths
+   or symlinks. Confirm that the active agent can load required skills or read
+   their accepted contents. Do not accept unfinished draft markers.
 5. Search for existing runner and tracker extensions before selecting
    integrations. Inspect their installed model schemas. Record exact extension
    versions and real check behavior. The `command` field describes a check; it
