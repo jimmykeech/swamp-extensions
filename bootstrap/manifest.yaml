@@ -1,0 +1,36 @@
+manifestVersion: 1
+name: "@jamesakeech/bootstrap"
+version: "2026.09.06.2"
+description: >-
+  Bootstrap a Codex project with a reviewed architecture control plane and the
+  official Swamp software-factory engine. Captures content-addressed accepted
+  baselines, preserves existing project files, reserves one factory and a unique
+  verification workflow per work item, and checks workspace isolation and
+  source-digest provenance. Includes guided project design, personal working
+  policy, factory-driving skills, and a readiness report that distinguishes
+  configuration acceptance from successful verification. Local intake works
+  without tracker credentials; selected tracker extensions supply remote reads.
+repository: https://github.com/jimmykeech/swamp-extensions
+paths:
+  base: manifest
+models:
+  - bootstrap.ts
+reports:
+  - readiness.ts
+workflows:
+  - bootstrap-check.yaml
+  - bootstrap-intake.yaml
+skills:
+  - bootstrap
+  - bootstrap-factory
+additionalFiles:
+  - README.md
+  - LICENSE.md
+dependencies:
+  - "@swamp/software-factory"
+labels:
+  - bootstrap
+  - control-plane
+  - software-factory
+  - agentic-coding
+  - codex

@@ -1,0 +1,4 @@
+{
+  "lock": false,
+  "lint": { "rules": { "exclude": ["no-import-prefix"] } }
+}
