@@ -9,7 +9,7 @@ does not require a specific description template or software factory.
 
 ## Install and use
 
-The initial package is prepared for publication. After it is published:
+Install the package, then create and run a reader model:
 
 ```sh
 swamp extension pull @jamesakeech/gitlab-work-items
