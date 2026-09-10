@@ -1,7 +1,7 @@
 manifestVersion: 1
 name: "@jamesakeech/gitlab-work-items"
-version: "2026.09.10.1"
-description: "Read GitLab issues, tasks, and incidents with full descriptions, actual types, direct parent/child relationships, and bounded pagination."
+version: "2026.09.10.2"
+description: "Manage GitLab issues, tasks and incidents: create, read, update, label, close, reopen, link parents and delete, with bounded read pagination."
 repository: https://github.com/jimmykeech/swamp-extensions
 
 paths:
