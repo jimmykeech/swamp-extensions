@@ -1,0 +1,24 @@
+manifestVersion: 1
+name: "@jamesakeech/gitlab-work-items"
+version: "2026.09.10.1"
+description: "Read GitLab issues, tasks, and incidents with full descriptions, actual types, direct parent/child relationships, and bounded pagination."
+repository: https://github.com/jimmykeech/swamp-extensions
+
+paths:
+  base: manifest
+
+models:
+  - model.ts
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+platforms: []
+
+labels:
+  - gitlab
+  - work-items
+  - issues
+  - tasks
+  - incidents
