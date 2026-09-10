@@ -12,6 +12,9 @@
   Audiobookshelf server (libraries, audiobooks/podcasts, listening progress,
   listening sessions, aggregate listening statistics), via the Audiobookshelf
   REST API.
+- **[`@jamesakeech/gitlab-work-items`](gitlab-work-items/)** — create, read,
+  update, label, close/reopen, link parents, and delete GitLab issues, tasks,
+  and incidents, with bounded read pagination.
 
 ## Development
 
