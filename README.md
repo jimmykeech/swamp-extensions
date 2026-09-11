@@ -5,6 +5,10 @@
 
 ## Extensions
 
+- **[`@jamesakeech/mongodb-datastore`](mongodb-datastore/)** — MongoDB storage for
+  shared repositories and serve instances, with namespace-aware sync, managed
+  configuration refresh, and remote coordination.
+
 - **[`@jamesakeech/fly`](fly/)** — monitor Fly.io organisations and applications
   (app discovery, machine/deploy state, volumes, snapshots, events) and take
   safe volume snapshots, via the Fly Machines API.

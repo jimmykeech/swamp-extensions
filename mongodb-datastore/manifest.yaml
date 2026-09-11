@@ -1,0 +1,23 @@
+manifestVersion: 1
+name: "@jamesakeech/mongodb-datastore"
+version: "2026.09.11.1"
+description: "MongoDB datastore for shared Swamp repositories: namespace-aware sync, managed configuration refresh, atomic remote control plane, distributed locks and content-addressed storage. Fork of @keeb/mongodb-datastore with a companion maintenance model and workflow. Requires a MongoDB replica set."
+repository: https://github.com/jimmykeech/swamp-extensions
+paths:
+  base: manifest
+labels:
+  - mongodb
+  - datastore
+  - distributed-lock
+  - content-addressed
+  - replica-set
+platforms: []
+additionalFiles:
+  - README.md
+  - LICENSE.txt
+datastores:
+  - extensions/datastores/mongodb/mod.ts
+models:
+  - extensions/models/maintenance.ts
+workflows:
+  - workflows/datastore-maintenance/workflow.yaml
