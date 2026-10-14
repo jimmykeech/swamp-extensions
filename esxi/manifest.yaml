@@ -2,7 +2,7 @@ manifestVersion: 1
 name: "@jamesakeech/esxi"
 # Starts at .3: revisions 1 and 2 were pre-publication iterations against a live
 # ESXi 6.7 host. Kept aligned with the model's own version field.
-version: "2026.07.31.3"
+version: "2026.10.15.1"
 description: "Read-only VM inventory for standalone VMware ESXi hosts, shaped for planning a migration off one and decommissioning it. Collects over SSH from vim-cmd, esxcli and the guests' own .vmx files — virtual hardware, storage with provisioned vs allocated bytes, in-guest identity (hostname, addressing, DNS, default route, mounted filesystems) via VMware Tools, live usage for rightsizing, and the complete vmx verbatim — plus a warnings list of what blocks a clean rebuild. One fan-out inventory method does the whole host in a single SSH round trip."
 
 repository: https://github.com/jimmykeech/swamp-extensions

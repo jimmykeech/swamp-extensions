@@ -1,180 +1,120 @@
 # @jamesakeech/bootstrap
 
-Bootstrap a project for any agent with native Swamp integration, including
-Claude, Pi, and Codex. Create an accepted architecture control plane and one
-Swamp software-factory instance per work item.
+Configure a project for a Swamp-integrated agent and create one software factory
+per work item. Bootstrap snapshots accepted architecture, instructions, skills,
+and check definitions. It then checks verification evidence against that
+baseline and the item's source digest.
 
-The agent designs the project and writes its documents. The extension snapshots
-the accepted configuration, prepares isolated factory definitions, and checks
-that verification evidence matches the work item's baseline and source digest.
-It reuses `@swamp/software-factory`; it does not implement another factory
-engine.
+The agent writes the project documents and drives the workflow. Bootstrap uses
+`@swamp/software-factory`; it does not run coding agents itself.
 
-## Start with your agent
+## Setup
 
-Select the `bootstrap` skill using your agent's native skill mechanism, or ask:
-
-> Use the bootstrap skill to configure this project for agentic coding with
-> Swamp factories.
-
-If the project idea and audience are not already known, the agent starts with:
-
-> What would you like to build, and who is it for?
-
-It asks one missing question at a time and waits for your answer. It reuses
-details from the conversation, README, existing documents, and saved draft. It
-then establishes the first useful version and material constraints. "Not sure"
-is a valid answer; the agent offers recommendations and states its assumptions.
-
-The agent saves progress in `docs/bootstrap/brief.md` and resumes from it after
-an interruption. It writes the project documents and JSON for you. Discovery
-comes before setup requirements and strict configuration checks. A draft is not
-approval: the final architecture baseline still needs your explicit acceptance.
-An existing accepted baseline or work item resumes without repeating onboarding.
-
-## Choose your architecture
-
-After discovering the project, the agent asks whether to use domain-driven
-design (DDD), the recommended default, or another architecture approach. DDD is
-also
-[Swamp's own design approach](https://github.com/swamp-club/swamp/blob/main/AGENTS.md).
-The agent explains the trade-offs and waits for your choice. It reuses a choice
-you have already made rather than asking again.
-
-You can choose another approach, combine compatible principles, or describe your
-own rules. For example, use vertical slices, ports and adapters, layered
-architecture, or a functional core. These can complement DDD; deployment and
-language remain separate choices. DDD does not automatically add microservices,
-CQRS, event sourcing, or unnecessary domain patterns.
-
-The agent records your choice in the brief and foundation ADR. It creates
-project-local `project-architecture` and `project-architecture-review` skills,
-or reuses equivalent existing skills. Their boundaries, examples, test guidance,
-and review criteria match the selected approach. It inventories and pins these
-files in the accepted baseline so later factory stages use the same rules.
-Existing accepted projects are not automatically converted to DDD.
-
-See the
-[architecture guidance](.agents/skills/bootstrap/references/architecture.md) for
-selection and skill generation. These are native-agent actions; the CLI does not
-conduct the interview or generate skill text.
-
-## Customise your software factory
-
-After architecture design, the agent outlines the proposed factory using
-bootstrap's default lifecycle on the official Swamp engine:
-
-```text
-import context → plan → plan review → implement → verify → code review → ready
-```
-
-It explains the stages, outputs, project skills, real checks, rework routes, and
-approval points. It then asks what you want to change and waits for your answer.
-You can customise stage instructions and additional skills, add specialist plan
-or code reviews, select checks, and set human approval points and rework limits.
-For example, add a security review after code review with its own project skill
-and explicit sign-off. Added reviews are sequential passes, not automatically
-separate agents.
-
-The agent saves the agreed outline in `docs/bootstrap/factory.md` and writes the
-configuration for you. Confirmed choices survive interrupted onboarding. The
-generated factory is previewed and validated before you accept the complete
-baseline. Every new work item receives that accepted template; existing items
-keep their original template.
-
-Customization is additive. Required base stages, fresh review findings, real
-verification, and source/baseline checks remain protected. Arbitrary stage
-removal, reordering, and executable stage definitions are not supported. See the
-[factory design reference](.agents/skills/bootstrap/references/factory-design.md)
-for configuration fields and examples.
-
-## Native Swamp setup
-
-Use the project's selected agent and its native Swamp skills. Check the
-installed CLI before initializing a new repository. These commands are setup
-reference; the agent can collect the project brief before running them:
+Use the project's selected agent and native Swamp integration. For a repository
+without `.swamp.yaml`, check the installed CLI's supported tools, then
+initialize:
 
 ```sh
 swamp help repo init
-```
-
-If `.swamp.yaml` is absent, run the following inside the project repository.
-Replace `<selected-tool>` with the chosen tool ID, such as `claude`, `pi`, or
-`codex`, when supported by the installed CLI:
-
-```sh
 swamp repo init --tool <selected-tool>
 swamp extension pull @jamesakeech/bootstrap
 ```
 
-Swamp supports built-in integrations and configured custom tools. Its
-[`tools` configuration](https://swamp-club.com/manual/reference/repository-configuration#tools)
-controls native instruction and skill locations. Current Swamp documentation
-includes [Pi integration](https://swamp-club.com/manual/how-to/ai-agents/pi),
-but older CLIs may not include it. Bootstrap does not install or upgrade the
-agent or Swamp itself.
+Replace `<selected-tool>` with a supported tool ID, such as `claude` or `codex`.
+Bootstrap does not install or upgrade Swamp or the agent.
 
-For an existing Swamp repository, keep its current tool enrollments. Pull the
-extension without reinitializing. If another integration is needed, inspect
-`swamp help repo upgrade` and preserve the full existing tool list and its order
-when adding it. Do not use forced reinitialization. Verify that the active agent
-can load both bundled skills from its native skill location.
+For an existing Swamp repository, pull the extension without reinitializing. If
+another integration is needed, inspect `swamp help repo upgrade` and preserve
+all existing tool enrollments and their order. Verify that the active agent can
+load both bundled skills from its native skill location.
 
-The bundled skill conducts the design conversation, uses the personal working
-profile, and guides validation and explicit baseline acceptance. It installs and
-configures suitable existing runner extensions for the project's real checks. It
-also writes a Git-owned `docs/bootstrap/baseline.json` acceptance pointer and a
-separate validation transcript. These are not inputs to their own baseline
-digest.
+## Start with your agent
 
-The default project configuration is `docs/bootstrap/project.json`. See the
-[configuration reference](.agents/skills/bootstrap/references/project-spec.md)
-for the required seven document roles and a complete Deno example. See the
-[working profile](.agents/skills/bootstrap/references/personal-policy.md) for
-the starting policy. Architecture and language choices remain project-specific.
+Ask your agent:
 
-`agentTool` records the baseline's chosen default agent. It does not restrict
-which Swamp-integrated agent can drive a factory. Instruction and skill paths
-come from the project's actual native setup, not a fixed `AGENTS.md` or
-`.agents/skills` layout. Bootstrap validates the listed project files; Swamp and
-the agent remain responsible for native integration and skill discovery.
+> Use the bootstrap skill to configure this project for agentic coding with
+> Swamp factories.
 
-## Lifecycle
+The [bootstrap skill](.agents/skills/bootstrap/SKILL.md) guides these steps:
+
+1. Discover the project, users, first useful version, and constraints. It reuses
+   existing information, asks one missing question at a time, and saves progress
+   in `docs/bootstrap/brief.md`.
+2. Confirm the architecture approach. Domain-driven design is the recommended
+   default, but requires your choice. The agent creates or reuses project-local
+   architecture and review skills for the selected approach.
+3. Agree on factory stages, skills, checks, reviews, approvals, and rework
+   limits. The agent records the design in `docs/bootstrap/factory.md`.
+4. Write the project configuration and documents, validate concrete factory and
+   workflow definitions, and request explicit acceptance of the baseline digest.
+5. Create a work item with its own factory, verification workflow, check-model
+   names, and reserved workspace.
+
+Drafts are not accepted baselines. Interrupted setup resumes from saved
+progress; accepted projects and existing work items do not repeat onboarding.
+New work items use the latest accepted template. Existing items keep their
+pinned template.
+
+Use [bootstrap-factory](.agents/skills/bootstrap-factory/SKILL.md) to drive or
+resume an accepted item through the default lifecycle:
 
 ```text
-Project: discover/resume → design → customise factory → check → validate preview → accept → readiness
-Item:    intake → create/validate/bind definitions → activate → start or resume
-Factory: import context → plan → review → implement → verify → review → ready
-                                      ↑ bounded rework ───────────────┘
+import context → plan → plan review → implement → verify → code review → ready
+                    ↑ bounded rework ─────────────────────────────┘
 ```
 
-Each item receives a distinct factory model, verification workflow, and
-check-model names. Shared configuration lives in accepted templates, not shared
-execution instances. A single `swamp serve` can expose these definitions; this
-extension does not start or configure a server.
+Factory customization can add stage instructions, skills, sequential specialist
+reviews, checks, and approval gates. It cannot remove or reorder required
+stages, replace them with executable definitions, or bypass review and
+verification. Added reviews do not automatically start separate agents.
+
+## Configuration
+
+Create one controller per repository:
+
+```sh
+swamp model create @jamesakeech/bootstrap project-bootstrap
+```
+
+Its optional `globalArguments.specPath` selects the project configuration; the
+default is `docs/bootstrap/project.json`. See these bundled references:
+
+- [Project specification](.agents/skills/bootstrap/references/project-spec.md):
+  seven required document roles and a complete Deno example.
+- [Architecture](.agents/skills/bootstrap/references/architecture.md):
+  architecture selection and project skill generation.
+- [Factory design](.agents/skills/bootstrap/references/factory-design.md):
+  supported customization fields and examples.
+- [Working profile](.agents/skills/bootstrap/references/personal-policy.md):
+  starting working agreements.
+
+`agentTool` records the default agent; any Swamp-integrated agent can drive the
+factory. Instruction and skill paths follow the project's native setup.
+Bootstrap validates listed files, while Swamp and the agent handle integration
+and skill discovery.
+
+The agent writes an acceptance pointer to `docs/bootstrap/baseline.json` and a
+separate validation transcript. Both stay outside the baseline document
+inventory to avoid including their own digest.
 
 ## Controller methods
-
-Create one controller with
-`swamp model create @jamesakeech/bootstrap project-bootstrap`. Its optional
-`globalArguments.specPath` selects the project JSON file.
 
 | Method                                    | Purpose                                                                         |
 | ----------------------------------------- | ------------------------------------------------------------------------------- |
 | `inspect`                                 | Report discovery or configuration status without editing project files.         |
-| `check`                                   | Capture and structurally validate a complete candidate baseline.                |
-| `preview`                                 | Return ID-free candidate definitions for concrete CLI validation.               |
+| `check`                                   | Capture and structurally validate a candidate baseline.                         |
+| `preview`                                 | Return candidate definitions without IDs for concrete CLI validation.           |
 | `accept`                                  | Record explicit acceptance of the unchanged baseline digest.                    |
-| `intake`                                  | Reserve or resume a stable work-item identity and its assembly.                 |
-| `bind`                                    | Check the actual Swamp-created IDs and definitions against the assembly.        |
+| `intake`                                  | Reserve or resume a work-item identity and assembly.                            |
+| `bind`                                    | Check actual Swamp-created IDs and definitions against the assembly.            |
 | `activate`                                | Reserve a non-overlapping workspace before coding.                              |
-| `context`                                 | Retrieve the item's pinned control-plane snapshot.                              |
-| `source_digest`                           | Hash the explicit source roots, including paths and file contents.              |
+| `context`                                 | Retrieve the item's pinned baseline snapshot.                                   |
+| `source_digest`                           | Hash configured source paths and file contents.                                 |
 | `begin_verification`, `seal_verification` | Check baseline, definitions, workspace, and source identity around real checks. |
-| `readiness`                               | Separate accepted configuration from current operational verification.          |
-| `release`                                 | Release a terminal or never-started item's workspace and retain its history.    |
+| `readiness`                               | Report configuration acceptance separately from operational verification.       |
+| `release`                                 | Release a terminal or never-started item's workspace; retain its history.       |
 
-For example, after drafting the configuration and its documents:
+After the configuration and documents are complete:
 
 ```sh
 swamp model method run project-bootstrap check --json
@@ -182,90 +122,78 @@ swamp model method run project-bootstrap preview --json
 swamp data get project-bootstrap preview --json
 ```
 
-Use the [bootstrap skill](.agents/skills/bootstrap/SKILL.md) for the required
-validation, acceptance, and binding steps. Use
-[bootstrap-factory](.agents/skills/bootstrap-factory/SKILL.md) to drive an
-accepted item. The controller does not allocate IDs: the agent creates
-definitions through the normal Swamp CLI and preserves the IDs it returns.
+Follow the bootstrap skill for validation, acceptance, and binding. The agent
+creates definitions through the Swamp CLI and preserves its allocated IDs.
 
-`inspect` returns `status`, `nextQuestion`, `issues`, and `acceptedBaselineId`
-for the active agent:
+`inspect` returns `status`, `nextQuestion`, `issues`, and `acceptedBaselineId`:
 
-| Status                  | Meaning                                                                                                  |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| `needs-details`         | Start or resume project discovery. Use known conversation or draft details before asking `nextQuestion`. |
-| `needs-configuration`   | Continue the project configuration, or recover it from the recorded accepted baseline.                   |
-| `ready-for-check`       | Proceed to strict `check`; this is not validation or acceptance.                                         |
-| `invalid-configuration` | Repair the reported configuration issue while preserving the draft and acceptance history.               |
+| Status                  | Next step                                                    |
+| ----------------------- | ------------------------------------------------------------ |
+| `needs-details`         | Start or resume discovery using known details first.         |
+| `needs-configuration`   | Continue configuration or recover the accepted snapshot.     |
+| `ready-for-check`       | Complete architecture and factory choices, then run `check`. |
+| `invalid-configuration` | Repair the reported issue without discarding history.        |
 
-The CLI only returns this signal. It does not launch an agent or display an
-interactive questionnaire. The native agent conducts the conversation. Accepted
-baselines suppress the new-project question when local configuration is missing.
-For a new baseline, finish the architecture and factory choices before `check`,
-even if inspection reports that the configuration fields are ready.
+These are routing signals for the agent. The CLI does not conduct an interview,
+and `ready-for-check` does not mean validation or acceptance has passed.
 
-## Readiness, safety, and scope
+## Limits and safety
 
-- Configuration readiness means the accepted files remain unchanged. Acceptance
-  requires the agent to validate concrete preview definitions and installed
-  versions. Its actor and validation references are audit attestations, not
-  authenticated proof.
-- Operational verification requires a successful dedicated verification workflow
-  and matching current source identity. Empty projects remain unverified until
-  their first implementation supplies the real source and tests. Source files
-  outside configured `sourcePaths` are not covered by the digest.
-- Work-item identity uses project, provider, scope, and reference. A retry
-  resumes the original baseline and binding. New baselines apply to new items.
-  Automatic migration, unrestricted graph editing, and history reset are not
-  part of this release.
-- Only one controller is supported per repository. Workspaces must already exist
-  inside that repository and contain the pinned control-plane files. Concurrent
-  items require non-overlapping workspaces. Bootstrap does not provision
-  worktrees or agents.
-- Local intake works without a tracker. Remote provider configuration records an
-  existing integration's read method. The agent invokes it; bootstrap does not
-  poll, create issues, or synchronize tracker state.
-- The model does not overwrite project documents. The agent preserves manual
-  edits and Swamp-managed sections in every selected instruction file. Accepted
-  instructions and skills must be real files inside the repository, including
-  when an agent normally loads global skills. Keep secrets out of snapshots.
-  File checks reject symlinks and private paths but do not replace a
-  content-level secret review.
-- Review and cycle limits use the native factory engine. Reaching `ready` does
-  not authorize pushing, publishing, deploying, or changing external systems.
+- Configuration readiness confirms that accepted files remain unchanged.
+  Acceptance requires concrete preview validation and installed-version checks.
+  Actor and validation references are audit attestations, not authenticated
+  proof.
+- Operational verification requires a successful dedicated workflow and matching
+  current source digest. Empty projects remain unverified until real source and
+  tests exist. Files outside configured `sourcePaths` are not covered.
+- Retries resume the original work-item baseline and binding. Automatic baseline
+  migration, unrestricted graph editing, and history reset are not supported.
+- Use one controller per repository. Workspaces must already exist inside it and
+  contain the pinned baseline files. Concurrent items need non-overlapping
+  workspaces. Bootstrap does not create worktrees, agents, or a `swamp serve`
+  server.
+- Local intake needs no tracker. Remote intake uses an existing integration's
+  read method, invoked by the agent. Bootstrap does not poll or update tracker
+  state.
+- The model does not overwrite project documents. Preserve manual edits and
+  Swamp-managed instruction sections. Accepted instructions and skills must be
+  real files inside the repository. File checks reject symlinks and private
+  paths; review file contents separately to keep secrets out of snapshots.
+- Native factory review and cycle limits apply. Reaching `ready` does not
+  authorize pushes, publishing, deployment, or other external changes.
 
-## Dependencies and attribution
+## Dependencies and license
 
-This release targets `@swamp/software-factory` **2026.06.24.1**. Record
-bootstrap, the factory engine, runner extensions, and any tracker integration
-with their exact versions in the project baseline. Verify installed versions
-before acceptance.
+This release targets `@swamp/software-factory` **2026.06.24.1**. Record and
+verify exact bootstrap, factory, runner, and tracker-extension versions before
+baseline acceptance.
 
-The control-plane approach is inspired by Equal Experts'
+Inspired by Equal Experts'
 [bootstrap control-plane prompt](https://github.com/EqualExperts/llm-toolkit/blob/main/prompts/00-bootstrap-control-plane.md).
-The implementation is independent of `@mesgme/control-plane`. The factory
-behavior uses the official
+The implementation is independent of `@mesgme/control-plane` and uses the
+official
 [Swamp software factory](https://swamp-club.com/extensions/@swamp/software-factory).
 
-Licensed under the [MIT License](LICENSE.md).
+[MIT](LICENSE.md).
 
 ## Development validation
 
-Run the focused tests from this directory with the project's Deno runtime:
+Run from this directory:
 
 ```sh
 deno test --allow-read --allow-write bootstrap_test.ts readiness_test.ts files_test.ts templates_test.ts
 ```
 
-`smoke_test.ts` is an opt-in real CLI test. Use an isolated initialized fixture
-repository named `bootstrap-smoke.*`. Install the pinned factory and Deno
-runner, source-load this extension, and create `project-bootstrap`. Then run:
+The opt-in `smoke_test.ts` runs real CLI checks. Prepare an isolated,
+initialized repository named `bootstrap-smoke.*`, install the pinned factory and
+Deno runner, source-load this extension, and create `project-bootstrap`. Then
+run:
 
 ```sh
 BOOTSTRAP_SMOKE_REPO=/absolute/path/to/bootstrap-smoke.fixture \
   deno test --allow-read --allow-write --allow-env --allow-run smoke_test.ts
 ```
 
-The smoke test creates project documents, two workspaces, definitions, and run
-data in that fixture. It runs real tests through the official runner. It does
-not publish or change an issue tracker. Never point it at a working project.
+The smoke test writes documents, two workspaces, definitions, and run data in
+the fixture. It does not publish or change a tracker. Never use a working
+project as the fixture.

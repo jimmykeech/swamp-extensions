@@ -1,40 +1,27 @@
 # @jamesakeech/esxi
 
-A [swamp](https://github.com/swamp-club/swamp) extension for taking a complete,
-read-only inventory of a **standalone VMware ESXi host** — shaped for planning a
-migration off it and decommissioning it.
+Collect a read-only inventory of a standalone VMware ESXi host for migration
+planning. The `@jamesakeech/esxi/vm` model reads `.vmx` files, `vim-cmd`, and
+`esxcli` over SSH. It does not start, stop, move, or delete guests.
 
-Standalone ESXi has no vSphere Automation REST API; that surface exists only on
-vCenter. So this reads over SSH from three sources:
+## Install
 
-- the guests' own **`.vmx`** files, captured whole, for every configured knob;
-- **`vim-cmd vmsvc/get.guest`**, for what only the running OS knows — hostname,
-  addressing, DNS, default route, mounted filesystems;
-- **`vim-cmd vmsvc/get.summary`**, for power state, live usage, and committed
-  storage.
-
-Where the vmx and `vim-cmd` overlap on configured values the vmx wins. Where
-they do not, `get.guest` is the only source: the vmx knows a NIC exists, but not
-what address the OS put on it.
-
-One model type: **`@jamesakeech/esxi/vm`**.
-
-It is deliberately **read-only**. Nothing here starts, stops, or deletes a
-guest — the host is being retired, and the disk moves themselves belong to the
-target hypervisor's tooling.
+```sh
+swamp extension pull @jamesakeech/esxi
+```
 
 ## Setup
 
-SSH must be enabled on the host (`TSM-SSH`; it is off by default). Key auth is
-preferred — ESXi reads `/etc/ssh/keys-root/authorized_keys`, so no secret has to
-round-trip through the model definition:
+Enable SSH (`TSM-SSH`) on ESXi. The machine running swamp needs an SSH client.
+The remote user must be able to read VM files and run `vim-cmd` and `esxcli`.
+For root key authentication, ESXi uses `/etc/ssh/keys-root/authorized_keys`.
 
 ```sh
 swamp model create @jamesakeech/esxi/vm esxi01
 ```
 
-Then edit the definition — `transport` must be a nested YAML mapping, not a
-`--global-arg` string:
+Edit the model definition with the required `name` and nested `transport`
+mapping:
 
 ```yaml
 globalArguments:
@@ -47,97 +34,52 @@ globalArguments:
       identityFile: ~/.ssh/id_ed25519
 ```
 
-For password auth instead, store the secret in a vault and use:
+Omit `identityFile` to use the SSH agent or SSH configuration. For password
+authentication, install `sshpass` on the swamp machine and replace `auth` with:
 
 ```yaml
-    auth:
-      kind: password
-      password: "${{ vault.get('esxi', 'root-password') }}"
+auth:
+  kind: password
+  password: "${{ vault.get('esxi', 'root-password') }}"
 ```
 
-Password auth requires [`sshpass`](https://sourceforge.net/projects/sshpass/) on
-the machine running swamp — it is not in homebrew-core and is not part of a
-stock macOS install. The password is passed via the `SSHPASS` environment
-variable (`sshpass -e`), never in argv where the process table would expose it.
+The password is passed through `SSHPASS`, not command arguments.
 
 ## Usage
 
 ```sh
 swamp model method run esxi01 inventory
-swamp data query esxi01 'resource.warnings.size() > 0'
+swamp data list esxi01
 ```
 
-| Method      | Captures                                                           |
-| ----------- | ------------------------------------------------------------------ |
-| `inventory` | every guest on the host, plus the host itself, in one SSH round trip |
+`inventory` collects the host in one SSH session and writes one `host` resource
+plus one `vm` resource per guest. Optional method inputs:
 
-`inventory` is a fan-out: it writes one `vm` resource per guest and one `host`
-resource, rather than making the caller loop. Arguments:
+| Input               | Default    | Effect                                                                           |
+| ------------------- | ---------- | -------------------------------------------------------------------------------- |
+| `vmNames`           | All guests | Emit only matching guests. Host totals still cover all guests.                   |
+| `includeDiskDetail` | `true`     | Read VMDK descriptors and measure guest folders. Disable to speed up collection. |
 
-- `vmNames` — restrict the emitted `vm` resources to these guests. Host totals
-  still describe the whole machine, since that is what is being retired.
-- `includeDiskDetail` (default `true`) — read vmdk descriptors and size guest
-  folders. Turn it off for a fast name/power-state-only pass.
+Each VM record includes:
 
-## What a `vm` record carries
+- Virtual hardware, firmware, boot settings, and BIOS UUID.
+- Disks, controllers, and separate provisioned and allocated sizes.
+- NICs, port groups, adapter models, and MAC addresses.
+- Guest hostname, IP addresses, DNS, routes, and mounted filesystems.
+- Power state, CPU and memory usage, uptime, and heartbeat.
+- Migration constraints, including snapshots, RDMs, and passthrough devices.
+- `rawVmx`, the full VMX key/value map, plus a `warnings` list.
 
-The inventory assumes the migration may be a **rebuild** rather than a
-lift-and-shift, so a record has to carry enough to reconstruct an equivalent
-guest from nothing.
+VMX values take precedence for overlapping configuration fields. Guest OS
+details require a running guest and VMware Tools. Review warnings for missing
+guest data, unreadable VMX files, and constraints that can affect migration.
 
-| Group             | Fields                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| Virtual hardware  | vCPUs, cores/socket, memory, hardware version, firmware, Secure Boot, boot order/delay, BIOS UUID |
-| Storage           | Per disk: controller, mode, bus sharing, CBT, **provisioned _and_ allocated bytes**               |
-| Virtual network   | Per NIC: port group, adapter model, effective MAC, address type                                   |
-| In-guest identity | Hostname, domain, per-NIC IPs with prefix lengths, DNS servers, search domains, default gateway   |
-| In-guest layout   | Mounted filesystems with type, capacity, free space                                               |
-| Live usage        | CPU/memory in use, uptime, heartbeat — the rightsizing evidence                                   |
-| Constraints       | Snapshots, RDMs, PCI passthrough, serial/parallel/USB, reservations and limits                    |
-| Everything else   | `rawVmx` — the complete vmx, verbatim                                                             |
+## Limits and compatibility
 
-The typed fields are the queryable summary; **`rawVmx` is the guarantee that
-nothing was dropped**. When a rebuilt guest behaves oddly, the answer is usually
-one of the several hundred vmx keys nobody thought to model.
+Tested with ESXi 6.7. Collection uses the `esxcli` XML formatter for
+compatibility. Only VMDK descriptors are read; `-flat.vmdk` disk contents are
+never transferred.
 
-Provisioned and allocated bytes are recorded **separately** because a thin
-disk's apparent size is not its copy cost — `ls` reports the full provisioned
-size while the datastore holds far less.
+## License
 
-### Warnings
-
-Each `vm` carries a `warnings` list of what blocks a clean rebuild: snapshots
-present, raw device mappings, PCI passthrough, Secure Boot enforced,
-independent-mode disks, an unreadable vmx — and, importantly, **a guest that
-could not be surveyed at all** because it is powered off or has no VMware Tools.
-Those are the guests that must be booted before they can be planned for, and
-they are easy to miss otherwise.
-
-## Version notes
-
-Tested against **ESXi 6.7**; the collection avoids the things that differ across
-versions:
-
-- **esxcli uses the `xml` formatter, not `json`.** The JSON formatter only
-  exists from ESXi 7.0 — 6.7 answers `Unable to find requested formatter: json`.
-  The XML formatter has been present since 5.0 and uses the same field names.
-- **`esxcli hardware cpu list` reports only `GenuineIntel` on 6.7.** The real
-  part number comes from `vim-cmd hostsvc/hostsummary`.
-- **`command -v` is not reliable in ESXi's busybox `ash`.** The pre-flight probe
-  uses `[ -x ... ]` with a `which` fallback and always exits 0, so a failure is
-  a readable statement rather than exit 127.
-
-esxcli's stderr is captured rather than discarded, so a failed call is reported
-as what it said instead of silently producing an empty datastore list.
-
-## Safety
-
-- The collection script is fed to the remote shell over **stdin** (`sh -s`), not
-  argv — ESXi's busybox `ash` would otherwise re-parse a long quoted string, and
-  every datastore or guest name in it becomes a quoting hazard. There is no
-  local `sh -c` at any point; `Deno.Command` spawns directly.
-- Transport option values are newline/NUL-guarded at schema time, so a crafted
-  host or proxy value cannot smuggle extra `-o` flags into the SSH invocation.
-- **`-flat.vmdk` files are never read.** Only descriptor vmdks are `cat`-ed,
-  with `head -c 4096` as a second bound — reading a flat file would pull the
-  entire disk across the SSH session.
+[MIT](LICENSE.md).
