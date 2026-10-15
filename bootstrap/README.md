@@ -8,6 +8,13 @@ baseline and the item's source digest.
 The agent writes the project documents and drives the workflow. Bootstrap uses
 `@swamp/software-factory`; it does not run coding agents itself.
 
+This checkout contains the older Bootstrap implementation. The **Optional
+factory features** section describes the newer published package based on
+**2026.09.11.1**, including `bootstrap-agent`; those features are absent from
+this checkout. Install the published extension to use them. References to
+agent-policy and delivery guidance refer to installed skills, not files in this
+checkout.
+
 ## Setup
 
 Use the project's selected agent and native Swamp integration. For a repository
@@ -26,7 +33,7 @@ Bootstrap does not install or upgrade Swamp or the agent.
 For an existing Swamp repository, pull the extension without reinitializing. If
 another integration is needed, inspect `swamp help repo upgrade` and preserve
 all existing tool enrollments and their order. Verify that the active agent can
-load both bundled skills from its native skill location.
+load the bundled skills from its native skill location.
 
 ## Start with your agent
 
@@ -35,7 +42,7 @@ Ask your agent:
 > Use the bootstrap skill to configure this project for agentic coding with
 > Swamp factories.
 
-The [bootstrap skill](.agents/skills/bootstrap/SKILL.md) guides these steps:
+The bootstrap skill (in the installed Bootstrap skills) guides these steps:
 
 1. Discover the project, users, first useful version, and constraints. It reuses
    existing information, asks one missing question at a time, and saves progress
@@ -55,8 +62,8 @@ progress; accepted projects and existing work items do not repeat onboarding.
 New work items use the latest accepted template. Existing items keep their
 pinned template.
 
-Use [bootstrap-factory](.agents/skills/bootstrap-factory/SKILL.md) to drive or
-resume an accepted item through the default lifecycle:
+Use bootstrap-factory (in the installed Bootstrap skills) to drive or resume an
+accepted item through the default lifecycle:
 
 ```text
 import context → plan → plan review → implement → verify → code review → ready
@@ -66,7 +73,8 @@ import context → plan → plan review → implement → verify → code review
 Factory customization can add stage instructions, skills, sequential specialist
 reviews, checks, and approval gates. It cannot remove or reorder required
 stages, replace them with executable definitions, or bypass review and
-verification. Added reviews do not automatically start separate agents.
+verification. Reviews are interactive by default; explicit dispatch selects an
+independent reviewer.
 
 ## Configuration
 
@@ -79,14 +87,14 @@ swamp model create @jamesakeech/bootstrap project-bootstrap
 Its optional `globalArguments.specPath` selects the project configuration; the
 default is `docs/bootstrap/project.json`. See these bundled references:
 
-- [Project specification](.agents/skills/bootstrap/references/project-spec.md):
-  seven required document roles and a complete Deno example.
-- [Architecture](.agents/skills/bootstrap/references/architecture.md):
-  architecture selection and project skill generation.
-- [Factory design](.agents/skills/bootstrap/references/factory-design.md):
-  supported customization fields and examples.
-- [Working profile](.agents/skills/bootstrap/references/personal-policy.md):
-  starting working agreements.
+- Project specification (in the installed Bootstrap skills): seven required
+  document roles and a complete Deno example.
+- Architecture (in the installed Bootstrap skills): architecture selection and
+  project skill generation.
+- Factory design (in the installed Bootstrap skills): supported customization
+  fields and examples.
+- Working profile (in the installed Bootstrap skills): starting working
+  agreements.
 
 `agentTool` records the default agent; any Swamp-integrated agent can drive the
 factory. Instruction and skill paths follow the project's native setup.
@@ -137,6 +145,48 @@ creates definitions through the Swamp CLI and preserves its allocated IDs.
 These are routing signals for the agent. The CLI does not conduct an interview,
 and `ready-for-check` does not mean validation or acceptance has passed.
 
+## Optional factory features
+
+The published package includes these features. Use the installed `bootstrap`
+skill's factory-design, agent-policy, and delivery references for exact schemas
+and evidence contracts.
+
+- **Independent and conditional reviews:** Review `execution` with
+  `mode: "dispatch"` and a `skill` selects one independent reviewer and requires
+  fresh completion evidence. Additional code reviews can use `when` for recorded
+  path/impact assessment. Skipped reviews retain applicable approval
+  requirements.
+- **Fast lane:** `factory.fastLane` skips planning while retaining verification
+  and final-approval policy. Intake requires a human `selection` with `lane`,
+  `actor`, `reference`, and `reason`. Escalation returns the same run to
+  standard planning and retains findings and history. Use controller `intake`
+  directly for `selection`; the bundled intake workflow does not expose that
+  input.
+- **Stage models:** `agentPolicyPath` selects project-relative JSON with
+  required `defaults.model` and `defaults.reasoningEffort`, plus fieldwise
+  `stages` overrides. The driver launches one fresh agent per policy-enabled
+  stage with pinned settings and records execution evidence. The
+  `bootstrap-agent` skill handles delegated planning, implementation, and
+  reviews; workers return results without mutating factory state. Unsupported
+  host settings block execution without fallback. Host/model identity remains an
+  attestation, not independent proof.
+- **Protected delivery:** `factory.delivery` with `mode: "codex"`, `modelName`,
+  and optional `instructions` adds `awaiting-approval → delivering → shipped`.
+  It needs an external coordinator, a committed and verified `headSha`, and
+  explicit human approval bound to the exact delivery subject. The workspace
+  must be its Git worktree root. Covered source must match raw HEAD filenames
+  and bytes; dirty, staged, untracked, or ignored covered files are rejected.
+  Shipment needs merge evidence, applicable release and acceptance evidence, and
+  confirmed item closure. Repository-only delivery needs no invented deployment.
+  Bootstrap validates receipt consistency; the coordinator performs external
+  operations and obtains provider readbacks. Incomplete or synthetic receipts
+  cannot ship.
+
+Policy selection does not approve an individual delivery. New policies require
+validated baseline acceptance; existing items retain their pinned configuration.
+Validate a real host-driven invocation before accepting reviewer or stage-model
+execution. Bootstrap is not an unattended inference service.
+
 ## Limits and safety
 
 - Configuration readiness confirms that accepted files remain unchanged.
@@ -150,8 +200,8 @@ and `ready-for-check` does not mean validation or acceptance has passed.
   migration, unrestricted graph editing, and history reset are not supported.
 - Use one controller per repository. Workspaces must already exist inside it and
   contain the pinned baseline files. Concurrent items need non-overlapping
-  workspaces. Bootstrap does not create worktrees, agents, or a `swamp serve`
-  server.
+  workspaces. Bootstrap does not create worktrees or a `swamp serve` server. The
+  native agent coordinates any configured worker dispatch.
 - Local intake needs no tracker. Remote intake uses an existing integration's
   read method, invoked by the agent. Bootstrap does not poll or update tracker
   state.
@@ -197,3 +247,5 @@ BOOTSTRAP_SMOKE_REPO=/absolute/path/to/bootstrap-smoke.fixture \
 The smoke test writes documents, two workspaces, definitions, and run data in
 the fixture. It does not publish or change a tracker. Never use a working
 project as the fixture.
+
+These tests cover this checkout, not newer published-only features.
