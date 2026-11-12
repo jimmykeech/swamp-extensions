@@ -9,6 +9,7 @@
     "npm:@marcbachmann/cel-js@7.6.1": "7.6.1",
     "npm:fast-xml-parser@4.5.1": "4.5.1",
     "npm:zod@4": "4.4.3",
+    "npm:zod@4.1.12": "4.1.12",
     "npm:zod@^4.3.6": "4.4.3"
   },
   "jsr": {
@@ -44,6 +45,9 @@
     },
     "strnum@1.1.2": {
       "integrity": "sha512-vrN+B7DBIoTTZjnPNewwhx6cBA/H+IS7rfW68n7XxC1y7uoiGQBxaKzqucGUgavX15dJgiGztLJ8vxuEzwqBdA=="
+    },
+    "zod@4.1.12": {
+      "integrity": "sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ=="
     },
     "zod@4.4.3": {
       "integrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="

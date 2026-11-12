@@ -1,0 +1,16 @@
+manifestVersion: 1
+name: "@jamesakeech/kanidm"
+version: "2026.11.12.2"
+description: "Configure Kanidm OAuth2 clients and groups through the Kanidm HTTP API, and extend OpenBao configuration for Kanidm OIDC."
+repository: https://github.com/jimmykeech/swamp-extensions
+paths:
+  base: manifest
+models:
+  - kanidm.ts
+  - openbao_oidc.ts
+additionalFiles:
+  - README.md
+labels:
+  - kanidm
+  - oidc
+  - openbao
