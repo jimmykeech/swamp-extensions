@@ -1,0 +1,29 @@
+manifestVersion: 1
+name: "@jamesakeech/hashicorp-vault"
+license: Apache-2.0
+version: "2026.11.12.1"
+description: "HashiCorp Vault secrets management via REST API (KV v1 and v2). Emits OpenTelemetry spans for get, put, and list, with one child span per request in the recursive list walk, so vault reads are visible in traces including reads during model and workflow runs where the host emits nothing. Span attributes carry the vault name, key name, and KV version only — never secret values, tokens, or error messages."
+repository: "https://github.com/jimmykeech/swamp-extensions"
+paths:
+  base: manifest
+vaults:
+  - extensions/vaults/hashicorp.ts
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+additionalFiles:
+  - README.md
+  - LICENSE.md
+  - NOTICE.md
+labels:
+  - api
+  - enterprise
+  - hashicorp
+  - kv
+  - observability
+  - opentelemetry
+  - secrets
+  - security
+  - vault

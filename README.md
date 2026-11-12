@@ -16,6 +16,7 @@ Select an extension for setup, configuration, and usage.
 | [`@jamesakeech/fly`](fly/)                                 | Monitor Fly.io applications and machines, and take volume snapshots.              |
 | [`@jamesakeech/forgejo-code`](forgejo-code/)               | Read repository trees and source files through `@shrug/forgejo`.                  |
 | [`@jamesakeech/gitlab-work-items`](gitlab-work-items/)     | Manage GitLab issues, tasks, incidents, labels, and parent links.                 |
+| [`@jamesakeech/hashicorp-vault`](hashicorp-vault/) | Read and write Vault/OpenBao KV secrets with rotating Agent token files. |
 | [`@jamesakeech/hardcover`](hardcover/)                     | Read Hardcover library, reading activity, and sessions.                           |
 | [`@jamesakeech/jellyfin-playback`](jellyfin-playback/)     | Read playback activity and watch history through `@keeb/jellyfin`.                |
 | [`@jamesakeech/letterboxd`](letterboxd/)                   | Read film diary entries from a public Letterboxd RSS feed.                        |
