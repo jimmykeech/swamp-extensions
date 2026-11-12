@@ -1,196 +1,121 @@
 # @jamesakeech/nginx-proxy-manager
 
 Manage an [Nginx Proxy Manager](https://nginxproxymanager.com) instance from
-swamp: read the whole configuration into addressable resources, and create,
-update, enable, disable and delete every object type it exposes.
+[swamp](https://github.com/swamp-club/swamp). Read inventory, manage hosts and
+access lists, and issue or upload TLS certificates. Use one model per NPM
+instance.
 
-One model instance represents one NPM installation. That grouping is forced by
-the API rather than chosen — authentication is instance-wide, and NPM's objects
-reference each other by numeric id (a proxy host names its certificate and
-access list by id), so a model that owned a single host could not resolve its
-own dependencies.
+## Setup
 
-## Install
-
-```bash
+```sh
 swamp extension pull @jamesakeech/nginx-proxy-manager
 swamp model create @jamesakeech/nginx-proxy-manager npm-edge
+swamp model edit npm-edge
 ```
 
-## Configure
-
-`baseUrl` is the **admin interface**, port 81 by default — not one of the sites
-NPM proxies. Keep the password in a vault; it is never written to a resource,
-but an inline password lands in the model definition and therefore in git.
+Set these global arguments. `baseUrl` must point to the admin interface, usually
+port 81. Store the admin password in a vault.
 
 ```yaml
 globalArguments:
   baseUrl: http://192.0.2.5:81
   identity: admin@example.com
-  secret: ${vault.homelab.npm-admin-password}
+  secret: ${{ vault.get('homelab', 'npm-admin-password') }}
   instanceLabel: edge
   requestTimeoutSec: 30
 ```
 
-`requestTimeoutSec` covers a single HTTP call. Raise it well past the default
-before a DNS-01 certificate request — issuance blocks while certbot waits for
-the challenge record to propagate.
+`instanceLabel` is optional. `requestTimeoutSec` defaults to 30 seconds per HTTP
+request. Increase it for DNS-01 certificate issuance.
 
-## Read the instance
+## Read inventory
 
-```bash
-swamp model @jamesakeech/nginx-proxy-manager method run sync npm-edge
-```
-
-`sync` writes one resource per object rather than one list, so a single host is
-addressable from CEL without post-processing:
-
-| Spec              | Instance name           | Holds                                   |
-| ----------------- | ----------------------- | --------------------------------------- |
-| `instance`        | `instance`              | Version, counts, and the health rollup  |
-| `proxyHost`       | `proxy-host-<id>`       | Domains, upstream, TLS, locations       |
-| `redirectionHost` | `redirection-host-<id>` | Domains, target, HTTP status            |
-| `deadHost`        | `dead-host-<id>`        | Domains parked on a 404                 |
-| `stream`          | `stream-<id>`           | Listening port and forward target       |
-| `accessList`      | `access-list-<id>`      | Address rules and basic-auth usernames  |
-| `certificate`     | `certificate-<id>`      | Provider, domains, `daysUntilExpiry`    |
-| `change`          | `change-<method>`       | Outcome of the last run of that method  |
-
-The `instance` resource carries what only a whole-instance read can tell you:
-
-- `certificatesExpired` and `certificatesExpiringWithin30d` — the two are
-  counted separately, so an already-dead certificate never hides inside
-  "expiring soon".
-- `hostsWithoutCertificate` — enabled proxy hosts still serving plain HTTP.
-- `domainsServedByMultipleHosts` — a domain configured on two hosts is served
-  by whichever config nginx loads first. `sync` logs a warning for these.
-
-```bash
+```sh
+swamp model method run npm-edge sync
 swamp data get npm-edge instance --json
-
-# Certificates about to lapse
-swamp data query 'modelName == "npm-edge" && specName == "certificate" &&
-  content.daysUntilExpiry < 14' --select content.niceName
-
-# Hosts that are turned off
-swamp data query 'modelName == "npm-edge" && specName == "proxyHost" &&
-  content.enabled == false' --select content.domainNames
 ```
 
-## Change the instance
+`sync` writes one resource per object:
 
-Every `apply*` method is idempotent. Without an explicit `id` it matches an
-existing object by its natural key and updates it in place, falling back to
-creation — so re-running a workflow converges rather than piling up duplicates.
+| Spec              | Instance name           |
+| ----------------- | ----------------------- |
+| `instance`        | `instance`              |
+| `proxyHost`       | `proxy-host-<id>`       |
+| `redirectionHost` | `redirection-host-<id>` |
+| `deadHost`        | `dead-host-<id>`        |
+| `stream`          | `stream-<id>`           |
+| `accessList`      | `access-list-<id>`      |
+| `certificate`     | `certificate-<id>`      |
+| `change`          | `change-<method>`       |
 
-| Method                 | Matches on                | Creates when no match     |
-| ---------------------- | ------------------------- | ------------------------- |
-| `applyProxyHost`       | exact set of domain names | a new proxy host          |
-| `applyRedirectionHost` | exact set of domain names | a new redirection host    |
-| `applyDeadHost`        | exact set of domain names | a new dead host           |
-| `applyStream`          | incoming port             | a new stream              |
-| `applyAccessList`      | list name                 | a new access list         |
+The `instance` resource reports expired certificates, certificates expiring
+within 30 days, enabled proxy hosts without certificates, and duplicate domain
+assignments.
 
-```bash
-swamp model @jamesakeech/nginx-proxy-manager method run applyProxyHost npm-edge \
-  --arg domainNames='["media.example.com"]' \
-  --arg forwardHost=192.0.2.20 \
-  --arg forwardPort=8096 \
-  --arg certificateId=4 \
-  --arg sslForced=true
+## Methods
+
+| Method                                                    | Purpose                                                     |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| `sync`                                                    | Read inventory and instance health                          |
+| `applyProxyHost`, `applyRedirectionHost`, `applyDeadHost` | Create or update a host, matched by its exact domain set    |
+| `applyStream`                                             | Create or update a stream, matched by incoming port         |
+| `applyAccessList`                                         | Create or update an access list, matched by name            |
+| `setEnabled`                                              | Enable or disable hosts or streams by `kind` and `ids`      |
+| `delete`                                                  | Delete objects of any supported `kind` by `ids`             |
+| `requestCertificate`                                      | Request a Let's Encrypt certificate using HTTP-01 or DNS-01 |
+| `renewCertificate`                                        | Renew certificates by `ids`                                 |
+| `uploadCertificate`                                       | Upload a certificate from local PEM files                   |
+
+```sh
+swamp model method run npm-edge applyProxyHost \
+  --input 'domainNames=["media.example.com"]' \
+  --input forwardHost=192.0.2.20 --input forwardPort=8096 \
+  --input certificateId=4 --input sslForced=true
+
+swamp model method run npm-edge setEnabled \
+  --input kind=proxyHost --input 'ids=[3,4]' --input enabled=false
 ```
 
-Each `apply*` re-reads the object afterwards and writes it as a resource, so
-the id of something just created is available without a second `sync`:
+Each `apply*` method updates a matching object or creates it when absent, then
+writes the resulting resource. Pass `id` when changing a host's domain set or an
+access list's name to avoid creating a second object.
 
-```
-data.latest("npm-edge", "change-applyProxyHost").attributes.id
-```
+Access list users are replaced as a complete set. Resend all users and passwords
+with `applyAccessList`; the stored resource contains usernames only.
 
-**Changing the domain set** of an existing host means the match key no longer
-matches, and a second host would be created. Pass `id` to update in place
-instead. The same applies to renaming an access list.
+Batch methods report `action: partial` when only some targets succeed.
+Successful deletions also remove the corresponding swamp resources. Run `sync`
+and verify IDs before deleting: NPM can reuse deleted IDs.
 
-**Access list users are replaced, not merged.** NPM hashes passwords and never
-returns them, so the `accessList` resource carries usernames only, and every
-`applyAccessList` must resend the complete user set — anyone omitted is dropped.
+## Certificates
 
-### Enable, disable, delete
-
-Both dispatch on a `kind` and take a list of ids, so a batch is one fan-out
-call. Running one method per id would contend on the model lock for no gain.
-
-```bash
-swamp model @jamesakeech/nginx-proxy-manager method run setEnabled npm-edge \
-  --arg kind=proxyHost --arg ids='[3,4]' --arg enabled=false
-
-swamp model @jamesakeech/nginx-proxy-manager method run delete npm-edge \
-  --arg kind=stream --arg ids='[7]'
+```sh
+swamp model method run npm-edge requestCertificate \
+  --input 'domainNames=["media.example.com"]' \
+  --input letsencryptEmail=me@example.com
 ```
 
-`setEnabled` covers `proxyHost`, `redirectionHost`, `deadHost` and `stream` —
-access lists and certificates have no enabled flag. `delete` covers all six.
+HTTP-01 requires public access to port 80. For DNS-01, set `dnsChallenge=true`,
+`dnsProvider`, and `dnsProviderCredentials`. Use DNS-01 for wildcard
+certificates or hosts without inbound port 80.
 
-> Verify ids against a fresh `sync` before deleting. **NPM reuses ids after
-> deletion**, so an id read from a stale resource can remove a different
-> object than the one you meant.
+`requestCertificate` reuses an existing Let's Encrypt certificate with the same
+exact domain set. Set `force=true` to reissue it.
 
-A successful delete also removes the object's swamp resource, so inventory does
-not keep ghosts. A fan-out where some ids succeed and others fail reports
-`action: "partial"` on the change record — never the successful action, so a
-guard written as `action == "deleted"` cannot fire on a half-done batch.
+## Limits
 
-### Certificates
-
-```bash
-# HTTP-01 — needs port 80 reachable from the public internet
-swamp model @jamesakeech/nginx-proxy-manager method run requestCertificate npm-edge \
-  --arg domainNames='["jellyfin.example.com"]' \
-  --arg letsencryptEmail=me@example.com
-
-# DNS-01 — the only route to a wildcard, and to hosts with no inbound port 80
-swamp model @jamesakeech/nginx-proxy-manager method run requestCertificate npm-edge \
-  --arg domainNames='["*.example.com"]' \
-  --arg letsencryptEmail=me@example.com \
-  --arg dnsChallenge=true \
-  --arg dnsProvider=cloudflare \
-  --arg dnsProviderCredentials="$(cat ~/.secrets/cloudflare.ini)"
-```
-
-`requestCertificate` reuses an existing Let's Encrypt certificate covering
-exactly the same domains rather than reissuing, so a scheduled workflow does
-not burn ACME rate limit. Pass `force: true` to override.
-
-`renewCertificate` takes a list of ids. `uploadCertificate` installs an
-externally issued certificate from PEM files on the machine running swamp — if
-the upload is rejected, the half-created record is removed rather than left
-behind to collide with a retry.
-
-## Pre-flight check
-
-`instance-reachable` runs before every mutating method: it logs in and reports
-an unreachable host separately from rejected credentials, so a failure names
-the actual problem. It is labelled `live` — skip it offline with
-`--skip-check-label live`.
-
-## Notes and limits
-
-- **Enabled state is a second call.** NPM ignores `enabled` on the object body
-  and only honours its `/enable` and `/disable` endpoints, so `apply*` sets it
-  afterwards, and only when the current state differs.
-- **TLS to the admin API.** Deno's `fetch` will not accept a self-signed
-  certificate. Point `baseUrl` at plain HTTP on the internal network (the usual
-  NPM deployment), or give the admin interface a certificate that chains to a
-  trusted root.
-- **Older NPM builds.** A collection the instance does not expose is reported
-  as empty with a warning rather than failing the sync, and `certificate_id` is
-  omitted from stream writes when unset, since stream TLS only arrived in 2.10.
-- **Not covered:** users, permissions, settings, audit log, and the default
-  site configuration.
+- Mutating methods run the `instance-reachable` pre-flight check. It has the
+  `live` label; skip it with `--skip-check-label live` when needed.
+- The admin API must use a trusted TLS certificate or HTTP on an internal
+  network. Self-signed TLS certificates are not supported.
+- Collections unavailable on older NPM versions produce a warning and empty
+  results.
+- Users, permissions, settings, audit logs, and default site configuration are
+  not managed.
 
 ## Development
 
-```bash
+```sh
 ~/.swamp/deno/deno check nginx_proxy_manager.ts
 ~/.swamp/deno/deno test --allow-net --allow-read .
 ```

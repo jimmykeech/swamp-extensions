@@ -1,89 +1,51 @@
 # @jamesakeech/hardcover
 
-Read-only monitoring of a single user's **[Hardcover](https://hardcover.app)**
-reading activity via the
-[Hardcover GraphQL API](https://docs.hardcover.app/api/getting-started/).
+Read a user's [Hardcover](https://hardcover.app) profile, tracked books, and
+reading sessions through its GraphQL API. All methods are read-only.
 
-It pulls three things:
+## Install
 
-- **profile** — your Hardcover user (id, username, name, total book count).
-- **book** — every book in your tracked library, one record per entry, with its
-  shelf status (Want to Read / Currently Reading / Read / Did Not Finish),
-  rating, review flag, author(s), page count, release year and read dates.
-- **read** — every reading session, one record per entry, with start/finish
-  dates and progress (page-based for print, seconds for audiobooks).
-
-Unlike streaming APIs, Hardcover exposes your **full** persistent history, so
-each `sync_*` run re-pulls the complete state and writes idempotent records
-keyed by the Hardcover row id — re-runs update in place instead of duplicating.
-Run it on a schedule to keep the local copy fresh and to capture reads as they
-finish. The API is rate-limited to **60 requests/minute**; this type paginates
-in pages of 100 and stays well under that.
+```sh
+swamp extension pull @jamesakeech/hardcover
+```
 
 ## Setup
 
-1. **Get an API token.** Sign in at [hardcover.app](https://hardcover.app), open
-   your account settings, and click **Hardcover API** — the token is shown at
-   the top of the page. Keep it private (it can modify your account) and note it
-   **expires ~yearly, resetting on Jan 1**.
+Get a token from **Account settings → Hardcover API**, then store it in a vault.
+The leading `Bearer` prefix is optional.
 
-2. **Store it in a vault** (never inline the token):
-
-   ```bash
-   swamp vault create local_encryption hardcover
-   swamp vault set hardcover HARDCOVER_API_TOKEN
-   # paste the token when prompted (the leading "Bearer " is optional)
-   ```
-
-3. **Create the model**, sourcing the token from the vault:
-
-   ```bash
-   swamp model create @jamesakeech/hardcover hardcover \
-     --arg apiToken='${{ vault.get("hardcover", "HARDCOVER_API_TOKEN") }}'
-   ```
+```bash
+swamp vault create local_encryption hardcover
+swamp vault put hardcover HARDCOVER_API_TOKEN
+swamp model create @jamesakeech/hardcover hardcover \
+  --global-arg apiToken='${{ vault.get("hardcover", "HARDCOVER_API_TOKEN") }}'
+```
 
 ## Methods
 
-| Method       | What it does                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| `whoami`     | Fetch your profile (id, username, name, book count). Use it to verify the token. One `profile`. |
-| `sync_books` | Pull your whole tracked library; one `book` per entry. `--arg statusId=` limits to one shelf.   |
-| `sync_reads` | Pull all your reading sessions; one `read` per entry (start/finish dates, progress).            |
-
-Shelf `statusId` values: **1** Want to Read, **2** Currently Reading, **3**
-Read, **5** Did Not Finish.
+| Method       | Result                                                                    | Optional arguments     |
+| ------------ | ------------------------------------------------------------------------- | ---------------------- |
+| `whoami`     | One `profile` with user details and book count                            | None                   |
+| `sync_books` | One `book` per library entry, with shelf, rating, authors, and read dates | `statusId`, `maxBooks` |
+| `sync_reads` | One `read` per reading session, with dates and page or audiobook progress | `maxReads`             |
 
 ```bash
-# Verify the token
-swamp model @jamesakeech/hardcover method run whoami hardcover
-
-# Sync the whole library, then all reads
-swamp model @jamesakeech/hardcover method run sync_books hardcover
-swamp model @jamesakeech/hardcover method run sync_reads hardcover
-
-# Just the "Currently Reading" shelf
-swamp model @jamesakeech/hardcover method run sync_books hardcover --arg statusId=2
+swamp model method run hardcover whoami
+swamp model method run hardcover sync_books
+swamp model method run hardcover sync_reads
 ```
 
-## Querying the data
+`statusId` filters books by shelf: `1` Want to Read, `2` Currently Reading, `3`
+Read, or `5` Did Not Finish. Omit limits to sync all books or reads.
 
-```bash
-# Everything you've finished, highest-rated first
-swamp data query hardcover.book 'attributes.statusId == 3' \
-  --order-by attributes.rating --desc
+Each sync fetches the selected history and updates records by Hardcover ID.
+Schedule syncs to keep the local data current. If authentication fails, refresh
+the token in the vault.
 
-# Reads finished this year
-swamp data query hardcover.read 'attributes.finishedAt >= "2026-01-01"'
-```
+## Inspect data
 
-## Notes & limits
-
-- **Read-only.** No method mutates Hardcover state.
-- **Rate limit:** 60 req/min. A full-library sync is a handful of paginated
-  requests; schedule syncs minutes apart, not seconds.
-- **Token expiry:** tokens expire ~yearly and reset Jan 1 — refresh the vault
-  value when `whoami` starts returning `HTTP 401 Unable to verify token`.
-- **Beta API:** Hardcover notes the API is still in flux and may change.
+Use `swamp data list hardcover` to find records, then
+`swamp data get hardcover <data-name>` to read one.
 
 ## License
 

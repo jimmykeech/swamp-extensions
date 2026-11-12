@@ -1,152 +1,87 @@
 # @jamesakeech/ansible
 
-Run an existing Ansible playbook as a swamp model method.
+Run existing Ansible playbooks from swamp. Each run records a status and
+per-host `PLAY RECAP` totals for use in workflows.
 
-This is deliberately not a replacement for Ansible. Roles, plays, templates and
-vars stay exactly where they are; what this adds is a typed, CEL-referenceable
-step so provisioning a machine and converging it can live in one workflow DAG
-instead of two systems joined by a shell script.
+## Install
 
-## Methods
-
-| Method | Behaviour |
-| --- | --- |
-| `check` | `ansible-playbook --check --diff`. Never mutates. |
-| `apply` | Runs the playbook for real. |
-
-Both parse the `PLAY RECAP` into per-host tallies and derive a single status:
-
-| Status | Meaning |
-| --- | --- |
-| `compliant` | check mode, `changed=0` everywhere — the host already matches |
-| `drift` | check mode, something would change |
-| `unchanged` | apply mode, nothing needed doing |
-| `applied` | apply mode, changes were made |
-| `failed` | any host failed or was unreachable, or a non-zero exit |
-
-`compliant` is the useful one. It is a machine-readable answer to *"does this
-host already match its declaration?"*, which makes it a gate for safely adopting
-a machine that was built by hand — run `check`, require `compliant`, and only
-then trust the definition.
-
-A `failed` status **throws**, so the workflow step fails rather than letting a
-DAG proceed as if an unconverged host were ready.
-
-## Data
-
+```sh
+swamp extension pull @jamesakeech/ansible
 ```
+
+## Setup
+
+Install `ansible-playbook` on the machine running swamp. Make the playbook,
+inventory, roles, and SSH credentials available there.
+
+```sh
+swamp model create @jamesakeech/ansible site \
+  --global-arg workdir=/srv/infra \
+  --global-arg playbook=ansible/site.yml \
+  --global-arg inventoryPath=ansible/inventory.yml \
+  --global-arg remoteUser=admin \
+  --global-arg privateKeyPath=/home/admin/.ssh/id_ed25519
+
+swamp model method run site check
+swamp model method run site check --input limit=web01
+swamp model method run site apply --input tags='["docker"]'
+```
+
+`workdir` and `playbook` are required. Playbook and inventory paths are relative
+to `workdir`. Set `ansibleBin` to use a different executable. The
+`playbook-present` check verifies the playbook and executable before a run.
+
+Use `inventoryContent` as a method input to supply YAML or INI inventory,
+including inventory built from model data. It overrides `inventoryPath` for that
+run.
+
+## Methods and results
+
+| Method  | Action                                                 |
+| ------- | ------------------------------------------------------ |
+| `check` | Run `ansible-playbook --check --diff` to detect drift. |
+| `apply` | Run the playbook to apply changes.                     |
+
+Both methods accept `limit`, `tags`, `skipTags`, `extraVars`,
+`inventoryContent`, `verbosity` (0–4), and `timeoutSec` (default 1800; maximum
+21600).
+
+| Status      | Meaning                                                |
+| ----------- | ------------------------------------------------------ |
+| `compliant` | Check mode reported no changes.                        |
+| `drift`     | Check mode reported changes.                           |
+| `unchanged` | Apply mode made no changes.                            |
+| `applied`   | Apply mode made changes.                               |
+| `failed`    | A host failed, was unreachable, or the command failed. |
+
+A failed run records its result and then throws, which fails the workflow step.
+Results include `hosts`, aggregate `totals`, and output tails. For example:
+
+```cel
 data.latest("site", "run-check-ansible-site.yml").attributes.status
 data.latest("site", "run-apply-ansible-site.yml").attributes.totals.changed
-data.latest("site", "run-check-ansible-site.yml").attributes.hosts
 ```
-
-`hosts` is an array of `{ host, ok, changed, unreachable, failed, skipped,
-rescued, ignored }` — per-host, so a workflow can react to one bad host rather
-than a single boolean.
-
-## Inventory from model data
-
-`inventoryContent` takes an inventory as a string, written to a temp file for the
-run. That lets a workflow build inventory from whatever swamp already knows —
-addresses discovered by a hypervisor model, say — rather than shelling out to a
-script that scrapes `tofu output`:
-
-```yaml
-- model: '@jamesakeech/ansible'
-  method: check
-  inputs:
-    inventoryContent: |
-      all:
-        hosts:
-          cwa01:
-            ansible_host: 10.10.120.146
-```
-
-Use `inventoryPath` instead when a checked-in inventory file is what you want.
 
 ## Secrets
 
-`vaultPassword`, `becomePassword` and `privateKey` are marked sensitive and are
-**never placed in argv**, because argv is readable by any local user via the
-process list:
+Supply `vaultPassword`, `becomePassword`, and `privateKey` through vault
+expressions. These values go into temporary files with mode `0600`, inside a
+`0700` directory removed after the run. Secret values are not passed in command
+arguments. `privateKey` takes precedence over `privateKeyPath`.
 
-- `vaultPassword` → a `0600` temp file passed to `--vault-password-file`
-- `becomePassword` → injected as `ansible_become_password` in a `0600` extra-vars
-  file passed as `-e @file`
-- `privateKey` → a `0600` temp file passed to `--private-key`
+Captured output redacts these secrets only when they contain at least six
+characters. Shorter values and secrets supplied through other inputs are not
+covered by this redaction.
 
-All live in a `0700` temp directory removed in a `finally`, so an exception
-mid-run does not leave secrets behind. Tests assert both that the mode is `0600`
-and that the files are actually gone afterwards.
+## Limitations
 
-### SSH keys: path or material
+- Check mode depends on the playbook's check-mode support and idempotency. Tasks
+  that explicitly disable check mode can still make changes.
+- Runs without a `PLAY RECAP` have no per-host details. The exit code alone
+  determines `unchanged` or `failed`.
+- Output is returned after completion. `stdoutTail` retains the last 64 KiB.
+- Timeout sends `SIGTERM`; an SSH child process can outlive the timeout.
 
-`privateKeyPath` points at a key already on the host. `privateKey` takes the key
-material itself, from a vault, and materialises it for the run — so a
-`swamp serve` host can converge machines without a long-lived private key
-sitting on its disk. `privateKey` wins if both are set, so a vault-supplied key
-beats a stale one left on disk.
+## License
 
-Note that `privateKeyPath` is deliberately *not* marked sensitive: it is a path,
-not a secret, and vaulting the string `/root/.ssh/id_ed25519` would achieve
-nothing.
-
-### Captured output is redacted
-
-A tail of stdout is stored as model data, and Ansible echoes extra-vars at high
-verbosity — so `verbosity: 4` would otherwise write `ansible_become_password`
-into the datastore. Every sensitive value is stripped from captured stdout and
-stderr before anything is persisted, replaced with `***REDACTED***`. Redaction
-targets the values rather than a pattern, so it holds however Ansible formats
-them, and there is a test that makes a playbook deliberately echo the extra-vars
-file to confirm the value never reaches stored data.
-
-Values shorter than 6 characters are skipped, since replacing them globally would
-mangle unrelated output for no real gain. Don't rely on this for a two-character
-password.
-
-## Quickstart
-
-```bash
-swamp vault put homelab ansible-vault-password
-swamp vault put homelab sudo-password
-
-swamp model create @jamesakeech/ansible site \
-  --global-arg workdir=/srv/infra-cwa \
-  --global-arg playbook=ansible/site.yml \
-  --global-arg inventoryPath=ansible/inventory.yml \
-  --global-arg remoteUser=jamesk \
-  --global-arg privateKeyPath=/root/.ssh/id_ed25519 \
-  --global-arg vaultPassword='${{ vault.get(homelab, ansible-vault-password) }}' \
-  --global-arg becomePassword='${{ vault.get(homelab, sudo-password) }}'
-
-swamp model method run site check
-swamp model method run site check --arg limit=cwa01
-swamp model method run site apply --arg tags='["docker"]'
-```
-
-## Pre-flight
-
-The `playbook-present` check verifies the playbook exists under `workdir` and
-that `ansibleBin --version` succeeds, so a typo in a path fails before any host
-is contacted.
-
-## Requirements
-
-`ansible-playbook` must be on the swamp host — this shells out to it rather than
-reimplementing anything. On a `swamp serve` host that means installing Ansible,
-making the playbook source available, and providing an SSH key the managed hosts
-authorise.
-
-## Known limitations
-
-- Status comes from the `PLAY RECAP`, so a playbook that never reaches a recap
-  (syntax error, missing inventory) reports `failed` with the stderr tail rather
-  than a structured per-task explanation.
-- `stdoutTail` keeps the last 64 KiB; a chatty playbook loses its earlier output.
-  Raise verbosity only when needed.
-- No streaming — output is captured and returned when the run ends. Long plays
-  look silent until they finish.
-- `timeoutSec` sends `SIGTERM`; a wedged SSH child may outlive it.
-- Ansible's own idempotency determines whether `check` is trustworthy. A play
-  using `command`/`shell` without `changed_when` will report drift forever.
+[MIT](LICENSE.md).
