@@ -31,13 +31,14 @@ const ConfigSchema = z.object({
   address: z.string().url().describe(
     "Vault server address (e.g., https://vault.example.com:8200)",
   ),
-  token: z.string().optional().describe(
+  token: z.string().optional().meta({ sensitive: true }).describe(
     "Vault authentication token. Leave this unset and run `vault login`, which " +
       "stores the token in ~/.vault-token where the provider reads it. A " +
       "literal token here is saved in plaintext in the vault config file and " +
       "is not recommended. The VAULT_TOKEN environment variable is also read " +
       "as a fallback, but it is not recommended.",
   ),
+  // swamp-quality-ignore credentials-sensitive-field: file path only; the token remains in the Agent sink.
   tokenFile: z.string().min(1).optional().describe(
     "Path to an OpenBao Agent or Vault Agent token sink. Read before every " +
       "request. Overrides config token, VAULT_TOKEN, and ~/.vault-token; " +
@@ -333,7 +334,12 @@ export const vault = {
               key,
             );
 
-            await handleResponse(response, "put", key, submitted);
+            if (!response.ok) {
+              await handleResponse(response, "put", key, submitted);
+            } else {
+              // KV v1 returns an empty HTTP 204. No write response data is used.
+              await response.body?.cancel();
+            }
           },
         );
       },

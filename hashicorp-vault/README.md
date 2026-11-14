@@ -27,18 +27,23 @@ swamp extension pull @jamesakeech/hashicorp-vault
 
 ## Configuration
 
-Add a vault entry to your `.swamp.yaml` to wire up the provider:
+Create a vault definition with the CLI:
+
+```bash
+swamp vault create @jamesakeech/hashicorp-vault hashi \
+  --config '{"address":"https://vault.example.com:8200","mount":"secret","kvVersion":"2"}'
+```
+
+Swamp stores the definition under `vaults/<type>/<id>.yaml`. Its `config` section
+supports these settings:
 
 ```yaml
-vaults:
-  hashi:
-    type: "@jamesakeech/hashicorp-vault"
-    config:
-      address: "https://vault.example.com:8200"
-      mount: "secret" # default: "secret"
-      kvVersion: "2" # "1" or "2" (default: "2")
-      namespace: "admin" # optional, Vault Enterprise only
-      # No `token` here — see Authentication below.
+config:
+  address: "https://vault.example.com:8200"
+  mount: "secret" # default: "secret"
+  kvVersion: "2" # "1" or "2" (default: "2")
+  namespace: "admin" # optional, Vault Enterprise only
+  # No `token` here — see Authentication below.
 ```
 
 ## Authentication

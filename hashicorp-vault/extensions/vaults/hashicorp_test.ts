@@ -207,7 +207,7 @@ function startMockVaultServer(kvVersion: "1" | "2" = "2"): MockVaultServer {
       if (req.method === "POST") {
         const body = await req.json();
         secrets.set(key, body);
-        return Response.json({});
+        return new Response(null, { status: 204 });
       }
 
       if (req.method === "LIST") {
@@ -609,7 +609,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: "hashicorp vault: put stores secret (KV v1)",
+  name: "hashicorp vault: put accepts empty HTTP 204 success (KV v1)",
   sanitizeResources: false,
   fn: async () => {
     const { url, server, secrets } = startMockVaultServer("1");
