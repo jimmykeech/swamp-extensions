@@ -1,0 +1,28 @@
+id: b53be3f7-3577-4c86-a771-ecee2914fdfe
+name: "@jamesakeech/bootstrap/intake"
+description: Reserve or resume one work item; the bootstrap skill applies and validates the returned definitions.
+inputs:
+  properties:
+    bootstrapModel:
+      type: string
+    reference:
+      type: string
+    provider:
+      type: string
+      default: local
+    workspace:
+      type: string
+      default: .
+  required: [bootstrapModel, reference]
+jobs:
+  - name: intake
+    steps:
+      - name: reserve
+        task:
+          type: model_method
+          modelIdOrName: ${{ inputs.bootstrapModel }}
+          methodName: intake
+          inputs:
+            reference: ${{ inputs.reference }}
+            provider: ${{ inputs.provider }}
+            workspace: ${{ inputs.workspace }}

@@ -1,0 +1,42 @@
+# BEGIN swamp managed section - DO NOT EDIT
+
+# Runtime data (not needed in version control)
+.swamp/
+
+# Local extension sources (developer-specific, not shared)
+.swamp-sources.yaml
+
+# Claude Code configuration (managed by swamp)
+.claude/
+# END swamp managed section
+
+# Local secrets for the mongodb datastore extension
+.env
+
+# Extension npm deps are bundled at build time, not lockfile-tracked
+# (per SWAMP.md rule 7). Deno writes deno.lock locally; we don't ship it.
+deno.lock
+
+# Author's working notes and auto-memory copies; not for public release
+design/
+issues/
+.vscode/
+
+# This is an extension repo, not a consumer swamp repo. A local .swamp.yaml
+# is needed for `swamp extension push` but isn't shipped; contributors
+# regenerate with `swamp init` on clone.
+.swamp.yaml
+
+# Same reasoning for the rest of the consumer-repo scaffolding used to
+# self-test the maintenance model against a real cluster. The shipped
+# extension source is extensions/; these are local instances of it.
+#   models/   — model instances (`swamp model create`)
+#   vaults/   — vault definitions holding the test cluster's credentials
+#   workflows/workflow-*.yaml — repo-local registration of a workflow whose
+#     canonical copy is workflows/<name>/workflow.yaml (declared in the
+#     manifest). Tracking both would let them drift.
+# Leading slash is load-bearing: an unanchored `models/` would also swallow
+# extensions/models/, which IS the shipped source.
+/models/
+/vaults/
+/workflows/workflow-*.yaml

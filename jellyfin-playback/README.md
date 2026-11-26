@@ -1,60 +1,46 @@
 # @jamesakeech/jellyfin-playback
 
-A [swamp](https://github.com/swamp-club/swamp) extension that adds
-**watch-activity** methods to the [`@keeb/jellyfin`](https://github.com/keeb/swamp-jellyfin)
-model type. The base type covers library inventory, audit, and identification;
-this adds the data needed to build watch-time dashboards. Read-only — neither
-method mutates server state.
+Read Jellyfin watch activity for dashboards and reports. Extends
+[`@keeb/jellyfin`](https://github.com/keeb/swamp-jellyfin) and reuses its
+`jellyfinUrl` and `jellyfinApiKey` arguments. The base extension is installed as
+a dependency. Both methods are read-only.
 
-This extends `@keeb/jellyfin`, so that extension is a dependency and is pulled
-automatically alongside this one.
+## Install
+
+```sh
+swamp extension pull @jamesakeech/jellyfin-playback
+```
 
 ## Methods
 
-| Method              | Source                                      | Captures                                                                          |
-| ------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
-| `playback_sessions` | Playback Reporting **plugin** (accurate)    | one `playbackSession` per event — item, type, client, device, duration, timestamp |
-| `watch_history`     | Jellyfin **core API** (no plugin, fallback) | one `watchedItem` per user/item — most-recent play, play count, runtime           |
+| Method              | Requirements              | Result                                                                                        |
+| ------------------- | ------------------------- | --------------------------------------------------------------------------------------------- |
+| `playback_sessions` | Playback Reporting plugin | One `playbackSession` per event, with timestamp, duration, client, and device                 |
+| `watch_history`     | Jellyfin core API         | One `watchedItem` per user/item, with latest play date, play count, runtime, and external IDs |
 
-- `playback_sessions(days=30, limit=5000)` runs a read-only SQL query against the
-  plugin's `PlaybackActivity` table via `POST /user_usage_stats/submit_custom_query`.
-  It is the accurate source (real durations, hour-of-day, per-device). Requires
-  the **Playback Reporting** plugin installed on the server (Dashboard → Plugins).
-- `watch_history(days=30)` fans out over **all** users via
-  `/Users/{id}/Items?IsPlayed=true` and needs no plugin — it works immediately.
-  Caveat: `LastPlayedDate` is set to a single timestamp by bulk "mark as played",
-  so it cannot back an honest daily/hourly time-series; use it for
-  series-rotation and per-user aggregates only.
+Run these methods on an existing `@keeb/jellyfin` model:
 
-## Setup
-
-The methods reuse the `@keeb/jellyfin` model's `jellyfinUrl` / `jellyfinApiKey`
-global arguments — no extra configuration. On a model instance of that type:
-
-```sh
-swamp model method run my-jellyfin watch_history --arg days=30
-swamp model method run my-jellyfin playback_sessions --arg days=30 --arg limit=5000
+```bash
+swamp model method run my-jellyfin watch_history --input days=30
+swamp model method run my-jellyfin playback_sessions --input days=30 --input limit=5000
 ```
 
-## Reading data with CEL
+Both methods default to the last 30 days and cover all users.
+`playback_sessions` defaults to 5000 events. Install the **Playback Reporting**
+plugin from Jellyfin's **Dashboard → Plugins** to use it.
 
-```text
-data.latest("my-jellyfin", "playbackSession").attributes.playDurationSeconds
-data.latest("my-jellyfin", "watchedItem").attributes.lastPlayedDate
-```
+## Data and limitations
 
-## Notes
-
-- Errors throw with the HTTP status before any data is written; the vaulted
-  `jellyfinApiKey` is never logged.
-- `playback_sessions` throws a descriptive error on `404` — the hint to install
-  the Playback Reporting plugin.
-- `days` and `limit` are integer-coerced before the SQL is built, so the
-  interpolated query is injection-safe.
-- Every `playbackSession` carries a `truncated` field — `true` when the pull hit
-  the `limit` cap (older events dropped), so a higher `limit` is needed to see
-  the rest.
+- `playback_sessions` records actual session durations. If an event's
+  `truncated` field is `true`, the result reached `limit`; increase it to
+  retrieve older events.
+- `watch_history` records only the latest play per user/item. It cannot measure
+  individual sessions or partial plays. Bulk **mark as played** operations also
+  change `LastPlayedDate`, so this data is unsuitable for daily or hourly
+  watch-time charts.
+- Resource instance names are `s-<rowid>` for sessions and `<userId>-<itemId>`
+  for watched items.
 
 ## License
 
-MIT — see [LICENSE.md](LICENSE.md) for details.
+MIT — see [LICENSE.md](LICENSE.md).

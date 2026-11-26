@@ -1,0 +1,16 @@
+id: 61a498b5-b692-49f8-b492-528221973581
+name: "@jamesakeech/bootstrap/check"
+description: Check an existing controller's control-plane documents before human acceptance.
+inputs:
+  properties:
+    bootstrapModel:
+      type: string
+  required: [bootstrapModel]
+jobs:
+  - name: check
+    steps:
+      - name: capture
+        task:
+          type: model_method
+          modelIdOrName: ${{ inputs.bootstrapModel }}
+          methodName: check

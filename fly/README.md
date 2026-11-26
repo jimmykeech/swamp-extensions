@@ -1,74 +1,72 @@
 # @jamesakeech/fly
 
-A [swamp](https://github.com/swamp-club/swamp) extension for monitoring Fly.io
-organisations and applications. It reads state directly from the
-[Fly Machines REST API](https://docs.machines.dev) — it never wraps `flyctl` and
-does not deploy.
+Monitor Fly.io organisations and apps through the Fly Machines API. The
+extension also creates volume snapshots. It does not deploy apps or require
+`flyctl` at runtime.
 
-Two model types:
+## Install
 
-- **`@jamesakeech/fly/org`** — discover and monitor every app in an org.
-- **`@jamesakeech/fly/app`** — monitor one app in depth and take volume
-  snapshots.
+```sh
+swamp extension pull @jamesakeech/fly
+```
 
 ## Setup
 
-Store a Fly API token in a vault (the `apiToken` argument is sensitive, so a
-literal value is rejected):
+Store a Fly API token in a swamp vault. The sensitive `apiToken` argument
+requires a vault expression. Use a token with access to the organisation or app
+and write access for snapshot creation.
 
 ```sh
 swamp vault create local_encryption fly
-swamp vault put fly FLY_API_TOKEN="$(fly auth token)"
-```
+swamp vault put fly FLY_API_TOKEN="<your-api-token>"
 
-## Org type — `@jamesakeech/fly/org`
-
-| Method   | Captures                                                         |
-| -------- | ---------------------------------------------------------------- |
-| `apps`   | every app in the org (id, machine count, network)                |
-| `status` | per-app machine-state summary (count, running, unhealthy, image) |
-
-`status` fans out over all apps and records an unreachable one as
-`reachable: false` with its error, rather than failing the whole run.
-
-```sh
 swamp model create @jamesakeech/fly/org fly-org \
   --global-arg orgSlug=personal \
   --global-arg "apiToken=\${{ vault.get('fly', 'FLY_API_TOKEN') }}"
 
-swamp model method run fly-org apps      # discover all apps
-swamp model method run fly-org status    # summarize all apps
-```
-
-## App type — `@jamesakeech/fly/app`
-
-| Method      | Kind  | Captures                                                 |
-| ----------- | ----- | -------------------------------------------------------- |
-| `status`    | read  | machines: state, region, running image, health checks    |
-| `volumes`   | read  | volumes: size, region, attachment, retention, disk usage |
-| `events`    | read  | per-machine lifecycle events: starts, exits, OOM kills   |
-| `snapshots` | read  | every snapshot across the app's volumes                  |
-| `snapshot`  | write | create a snapshot per volume (or a specific `volumeId`)  |
-
-`snapshot` is additive (it never deletes) and runs a `live`-labelled
-`volumes-present` pre-flight check, skippable with `--skip-check-label live`.
-
-```sh
 swamp model create @jamesakeech/fly/app fly-app \
   --global-arg appName=my-app \
   --global-arg "apiToken=\${{ vault.get('fly', 'FLY_API_TOKEN') }}"
 
-swamp model method run fly-app status
-swamp model method run fly-app snapshot   # back up every volume
+swamp model method run fly-org status
+swamp model method run fly-app volumes
 ```
 
-## Notes
+The org model requires `orgSlug` and `apiToken`. The app model requires
+`appName` and `apiToken`.
 
-- Errors throw with the HTTP status before any data is written; the vaulted
-  `apiToken` is masked in output.
-- `usedPercent` comes from Fly's volume block stats, which the list endpoint can
-  report as `0%` — treat disk usage as indicative.
+## Organisation methods: `@jamesakeech/fly/org`
+
+| Method   | Result                                                                |
+| -------- | --------------------------------------------------------------------- |
+| `apps`   | All apps in the organisation, with IDs, machine counts, and networks. |
+| `status` | Per-app machine counts, running and unhealthy counts, and images.     |
+
+`status` records an inaccessible app as `reachable: false` with its error and
+continues with the other apps.
+
+## App methods: `@jamesakeech/fly/app`
+
+| Method      | Action                                                                 |
+| ----------- | ---------------------------------------------------------------------- |
+| `status`    | Read machine states, regions, images, and health checks.               |
+| `volumes`   | Read volume size, region, attachment, retention, and disk usage.       |
+| `events`    | Read machine lifecycle events, including starts, exits, and OOM kills. |
+| `snapshots` | List snapshots across all app volumes.                                 |
+| `snapshot`  | Create a snapshot for every volume, or one optional `volumeId`.        |
+
+```sh
+swamp model method run fly-app snapshot
+```
+
+`snapshot` does not delete existing snapshots. Its `volumes-present` check has
+the `live` label; skip it with `--skip-check-label live`. If some snapshot
+requests fail, the method throws and reports successful requests. Those
+snapshots remain.
+
+Fly can report volume block statistics as zero, so treat `usedPercent` as an
+estimate.
 
 ## License
 
-MIT — see [LICENSE.md](LICENSE.md) for details.
+[MIT](LICENSE.md).

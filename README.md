@@ -1,29 +1,70 @@
-# swamp-extensions
+# Swamp extensions
 
-[swamp](https://github.com/swamp-club/swamp) extensions published under the
-`@jamesakeech` collective.
+[Swamp](https://github.com/swamp-club/swamp) extensions published under
+`@jamesakeech`.
 
 ## Extensions
 
-- **[`@jamesakeech/fly`](fly/)** — monitor Fly.io organisations and applications
-  (app discovery, machine/deploy state, volumes, snapshots, events) and take
-  safe volume snapshots, via the Fly Machines API.
-- **[`@jamesakeech/audiobookshelf`](audiobookshelf/)** — monitor a self-hosted
-  Audiobookshelf server (libraries, audiobooks/podcasts, listening progress,
-  listening sessions, aggregate listening statistics), via the Audiobookshelf
-  REST API.
-- **[`@jamesakeech/nix-vm-vuln`](nix-vm-vuln/)** — read-only vulnerability scan
-  of a booted NixOS VM over SSH, matched against OSV.dev and the published
-  NixOS GitHub security advisories.
+Select an extension for setup, configuration, and usage.
+
+| Extension                                                  | Purpose                                                                           |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [`@jamesakeech/ansible`](ansible/)                         | Check and apply existing Ansible playbooks with structured per-host results.      |
+| [`@jamesakeech/audiobookshelf`](audiobookshelf/)           | Read libraries, listening progress, sessions, and statistics from Audiobookshelf. |
+| [`@jamesakeech/bootstrap`](bootstrap/)                     | Set up reviewed project architecture and isolated Swamp software factories.       |
+| [`@jamesakeech/esxi`](esxi/)                               | Collect read-only VM inventory from standalone VMware ESXi hosts.                 |
+| [`@jamesakeech/fly`](fly/)                                 | Monitor Fly.io applications and machines, and take volume snapshots.              |
+| [`@jamesakeech/forgejo-code`](forgejo-code/)               | Read repository trees and source files through `@shrug/forgejo`.                  |
+| [`@jamesakeech/gitlab-work-items`](gitlab-work-items/)     | Manage GitLab issues, tasks, incidents, labels, and parent links.                 |
+| [`@jamesakeech/hashicorp-vault`](hashicorp-vault/) | Read and write Vault/OpenBao KV secrets with rotating Agent token files. |
+| [`@jamesakeech/hardcover`](hardcover/)                     | Read Hardcover library, reading activity, and sessions.                           |
+| [`@jamesakeech/jellyfin-playback`](jellyfin-playback/)     | Read playback activity and watch history through `@keeb/jellyfin`.                |
+| [`@jamesakeech/letterboxd`](letterboxd/)                   | Read film diary entries from a public Letterboxd RSS feed.                        |
+| [`@jamesakeech/mongodb-datastore`](mongodb-datastore/)     | Store shared repository data in MongoDB. Requires a replica set.                  |
+| [`@jamesakeech/nginx-proxy-manager`](nginx-proxy-manager/) | Manage proxy hosts, streams, access lists, and TLS certificates.                  |
+| [`@jamesakeech/nix-vm-vuln`](nix-vm-vuln/)                 | Scan a booted NixOS VM for known vulnerabilities over SSH.                        |
+| [`@jamesakeech/omada`](omada/)                             | Monitor Omada networks, detect configuration changes, and run device operations.  |
+| [`@jamesakeech/pocket-id`](pocket-id/)                     | Read Pocket ID health, users, OIDC clients, groups, API keys, and audit activity. |
+| [`@jamesakeech/spotify`](spotify/)                         | Read recent listening activity, top artists, and top tracks with OAuth helpers.   |
+| [`@jamesakeech/technitium`](technitium/)                   | Manage Technitium DNS zones, records, filtering, backups, and clusters.           |
+
+## Installation
+
+Run this command inside your Swamp repository, replacing the package name with
+one from the catalog:
+
+```sh
+swamp extension pull @jamesakeech/mongodb-datastore
+```
+
+Follow the extension's README for credentials, service requirements, and
+configuration.
 
 ## Development
 
+Each extension lives in its own directory with a self-contained `manifest.yaml`.
+Manifest paths are relative to that directory (`paths.base: manifest`).
+
+Use Deno to run the tests and checks for the extension you change. For example,
+from the repository root:
+
 ```sh
-deno test --allow-net --allow-run fly/ audiobookshelf/ nix-vm-vuln/
-deno fmt --check
-deno lint
+deno test --allow-net fly/
+deno fmt --check fly/
+deno lint fly/
 ```
 
-Each extension lives in its own directory with a self-contained `manifest.yaml`
-(using `paths.base: manifest`). Publish with
-`swamp extension push fly/manifest.yaml`.
+Check the extension's README and Deno configuration for additional permissions,
+dependencies, or live service requirements.
+
+Build and validate a package without publishing it:
+
+```sh
+swamp extension push fly/manifest.yaml --dry-run --json
+```
+
+## License
+
+This repository is licensed under the [MIT License](LICENSE). Extension
+directories retain their own license and copyright notices, including
+[the MongoDB datastore's upstream attribution](mongodb-datastore/LICENSE.txt).

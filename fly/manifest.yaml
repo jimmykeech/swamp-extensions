@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@jamesakeech/fly"
-version: "2026.07.01.3"
+version: "2026.10.15.1"
 description: "Monitor Fly.io organisations and applications — discover apps, machine/deploy state, volumes, snapshots, events — and take safe volume snapshots, via the Fly Machines API."
 
 repository: https://github.com/jimmykeech/swamp-extensions
