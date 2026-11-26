@@ -22,6 +22,7 @@ Select an extension for setup, configuration, and usage.
 | [`@jamesakeech/letterboxd`](letterboxd/)                   | Read film diary entries from a public Letterboxd RSS feed.                        |
 | [`@jamesakeech/mongodb-datastore`](mongodb-datastore/)     | Store shared repository data in MongoDB. Requires a replica set.                  |
 | [`@jamesakeech/nginx-proxy-manager`](nginx-proxy-manager/) | Manage proxy hosts, streams, access lists, and TLS certificates.                  |
+| [`@jamesakeech/nix-vm-vuln`](nix-vm-vuln/)                 | Scan a booted NixOS VM for known vulnerabilities over SSH.                        |
 | [`@jamesakeech/omada`](omada/)                             | Monitor Omada networks, detect configuration changes, and run device operations.  |
 | [`@jamesakeech/pocket-id`](pocket-id/)                     | Read Pocket ID health, users, OIDC clients, groups, API keys, and audit activity. |
 | [`@jamesakeech/spotify`](spotify/)                         | Read recent listening activity, top artists, and top tracks with OAuth helpers.   |

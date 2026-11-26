@@ -1,0 +1,33 @@
+manifestVersion: 1
+name: "@jamesakeech/nix-vm-vuln"
+version: "2026.11.26.1"
+license: MIT
+description: "Read-only vulnerability scan of a booted NixOS VM. One SSH session lists the current system closure. The runner matches package names and versions against OSV.dev and the published NixOS/nixpkgs and NixOS/nix GitHub security advisories, then stores a scan a method report can render."
+
+repository: https://github.com/jimmykeech/swamp-extensions
+
+# Source, README, and LICENSE all live alongside this manifest.
+paths:
+  base: manifest
+
+additionalFiles:
+  - README.md
+  - LICENSE.md
+
+models:
+  - nix_vm_vuln_scan.ts
+reports:
+  - nix_vm_vuln_report.ts
+
+# Needs an ssh client on the host running swamp.
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+
+labels:
+  - nix
+  - nixos
+  - security
+  - vulnerability
