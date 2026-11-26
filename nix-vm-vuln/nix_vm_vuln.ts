@@ -711,7 +711,7 @@ async function readVmInventory(
   target: SshTarget,
   signal: AbortSignal,
 ): Promise<string> {
-  const command = new Deno.Command("ssh", {
+  const command = new Deno.Command("ssh", { // swamp-quality-ignore deno-command
     args: sshCommandArgs(target),
     stdin: "piped",
     stdout: "piped",
