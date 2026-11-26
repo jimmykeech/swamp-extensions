@@ -12,11 +12,14 @@
   Audiobookshelf server (libraries, audiobooks/podcasts, listening progress,
   listening sessions, aggregate listening statistics), via the Audiobookshelf
   REST API.
+- **[`@jamesakeech/nix-vm-vuln`](nix-vm-vuln/)** — read-only vulnerability scan
+  of a booted NixOS VM over SSH, matched against OSV.dev and the published
+  NixOS GitHub security advisories.
 
 ## Development
 
 ```sh
-deno test --allow-net fly/ audiobookshelf/
+deno test --allow-net --allow-run fly/ audiobookshelf/ nix-vm-vuln/
 deno fmt --check
 deno lint
 ```
